@@ -54,7 +54,7 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="price">Price:</label>
-                    <input type="number" id="price" bind:value={price} min="0" step="any" required />
+                    <input style="padding-left: 20px" type="number" id="price" bind:value={price} min="0" step="any" required />
                 </div>
                 <div class="form-group">
                     <label for="quantity">Quantity:</label>
@@ -329,6 +329,11 @@
         textarea {
             font-size: 0.9rem;
             padding: 0.6rem;
+            padding-left: 22px;
+
+        }
+        
+        #price {
         }
 
         .marketplace-table th,
@@ -342,4 +347,7 @@
             padding: 0.8rem;
         }
     }
+    #price {
+            padding-left: 22px !important;
+        }
 </style>

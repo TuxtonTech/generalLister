@@ -1,5 +1,6 @@
 <script lang="ts">
     import { imageUrls } from "$lib/store/app/helpers/detailsPage";
+	import { selectedPage } from "$lib/store/app/helpers/selectedPage";
 
     let currentImageIndex = 0;
 
@@ -17,6 +18,17 @@
         currentImageIndex = (currentImageIndex - 1 + $imageUrls.length) % $imageUrls.length;
     }
 
+	function addImage() {
+		imageUrls.update((urls) => {
+			const newUrls =  currentImageIndex > urls.length ? [...urls, null] : [...urls.slice(0, currentImageIndex), null, ...urls.slice(currentImageIndex++)]
+			console.log(newUrls, currentImageIndex)
+			return newUrls
+
+		})
+
+		selectedPage.set('cameraModal')
+	}
+
     function deleteImage() {
         imageUrls.update((urls) => {
             const newUrls = urls.filter((_, index) => index !== currentImageIndex);
@@ -30,6 +42,16 @@
             return newUrls;
         });
     }
+
+	function retryImage() {
+		imageUrls.update((urls) => {
+			urls[currentImageIndex] = null
+			return urls
+		})
+
+		console.log(imageUrls)
+		selectedPage.set('cameraModal')
+	}
 
     // Handle keyboard navigation
     function handleKeydown(event: any) {
@@ -78,7 +100,7 @@
             <div class="action-buttons">
                 <button 
                     class="action-btn action-btn--retry" 
-                    on:click={() => {}}
+                    on:click={() => {retryImage()}}
                     aria-label="Retake image"
                 >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -87,7 +109,16 @@
                     </svg>
                     <span>Retake</span>
                 </button>
-                
+                <button 
+                    class="action-btn action-btn--add" 
+                    on:click={addImage}
+                    aria-label="Add another image"
+                >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform: rotate(45deg);">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="sr-only">Add</span>
+                </button>
                 <button 
                     class="action-btn action-btn--delete" 
                     on:click={deleteImage}
@@ -265,6 +296,17 @@
     }
 
     .action-btn--retry:hover {
+        background: linear-gradient(135deg, #2980b9, #1f618d);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+    }
+
+	.action-btn--add {
+        background: linear-gradient(135deg, #34db95, #298eb9);
+        color: white;
+    }
+
+    .action-btn--add:hover {
         background: linear-gradient(135deg, #2980b9, #1f618d);
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);

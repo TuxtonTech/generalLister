@@ -69,7 +69,7 @@
     grid-template-columns: auto 1fr;
     gap: .75rem;
     padding: .75rem;
-    background: rgb(65, 76, 86);
+    background: #3c4965;
     height: calc(100%);
     width: 100dvw;
     color: white;
@@ -84,11 +84,13 @@
   
   #navbarWrapper {
     border-radius: 1rem 0rem 0rem 1rem;
+            z-index: 11 !important;
   }
   
   #componentWrapper {
     overflow-y: auto;
     border-radius: 0rem 1rem 1rem 0rem;
+    background: linear-gradient(135deg, #3b83f6b5, #2564ebc6);
   }
 
   @media (max-width: 768px) {
@@ -104,7 +106,7 @@
       position: absolute;
       border-radius: 0rem 1rem 1rem 0rem;
       height: 100%;
-      background: blue;
+      background: linear-gradient(135deg, #1e1e3b 0%, #0f172a 100%);
       z-index: 10;
       transform: translateX(-100%);
       transition: transform 0.3s ease-in-out;

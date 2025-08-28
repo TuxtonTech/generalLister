@@ -261,6 +261,10 @@
         padding-bottom: 0.75rem;
     }
 
+    #price {
+        padding-left: 22px;
+    }
+
     .form-group {
         margin-bottom: 1.25rem;
     }

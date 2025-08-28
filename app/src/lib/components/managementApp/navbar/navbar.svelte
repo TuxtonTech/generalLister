@@ -1,7 +1,6 @@
 <script lang="ts">
-    import { selectedPage } from "$lib/store/app/helpers/selectedPage";
+    import { isNavbarVisible, selectedPage } from "$lib/store/app/helpers/selectedPage";
     import { createEventDispatcher } from 'svelte';
-
     // Create an event dispatcher
     const dispatch = createEventDispatcher();
 
@@ -9,9 +8,9 @@
     function navigateAndClose(pageName: string) {
         // 1. Navigate to the selected page
         selectedPage.set(pageName);
-        
+        isNavbarVisible.set(false);
         // 2. Dispatch a custom event to tell the parent to close the navbar
-        dispatch('navClick');
+        // dispatch('navClick');
     }
 </script>
 
