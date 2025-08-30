@@ -16,6 +16,14 @@
 
 
     $: {
+        if($imageUrls.length == 1) {
+            fetch('/api/fmv', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageBuffer: $imageUrls[0] }) // Replace null with actual image buffer if needed
+            })
+        }
+
     }
 
     onMount(async () => {
@@ -95,6 +103,7 @@
                     
                     selectedPage.set('detailsModal');
                     capturedImages = [...capturedImages, imageUrl];
+                   
             }
             isCapturing = false;
         }, 'image/jpeg', 0.9);
