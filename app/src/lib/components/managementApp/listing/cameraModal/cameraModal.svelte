@@ -13,18 +13,12 @@
     let isFlashOn = false;
     let showCountdown = false;
     let countdown = 0;
+    let lastItem: string = ''
 
-
-    $: {
-        if($imageUrls.length == 1) {
-            fetch('/api/fmv', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBuffer: $imageUrls[0] }) // Replace null with actual image buffer if needed
-            })
-        }
-
-    }
+    
+$: {
+   
+}
 
     onMount(async () => {
         console.log("Cam Inited")
@@ -36,7 +30,7 @@
             stream.getTracks().forEach(track => track.stop());
         }
     });
-
+    
     async function initializeCamera() {
         try {
             cameraError = '';
@@ -96,13 +90,18 @@
             if (blob) {
                 const imageUrl = URL.createObjectURL(blob);
                     imageUrls.update((urls)=> {
-                       const index = urls.findIndex(v => v == null)
+                       const index = urls.findIndex(v => v === null)
+                       console.log(index, urls)
+                       if(index && urls.length >= 1) {
                         urls[index] = imageUrl
+                        selectedPage.set('detailsModal');
+
+                       }
                         return urls
                    })
                     
-                    selectedPage.set('detailsModal');
                     capturedImages = [...capturedImages, imageUrl];
+                    imageUrls.set(capturedImages)
                    
             }
             isCapturing = false;

@@ -1,5 +1,7 @@
 <!-- detailsModal.svelte -->
 <script lang="ts">
+	import { imageUrls } from "$lib/store/app/helpers/detailsPage";
+	import { selectedPage } from "$lib/store/app/helpers/selectedPage";
     import CarouselModal from "./carouselModal/carouselModal.svelte";
     
     // Form fields
@@ -11,6 +13,45 @@
     // Listing Aspects logic:
     let aspectInput: string = '';
     let listingAspects: string[] = [];
+    let lastItem: string = ''
+
+
+    async function blobUrlToBase64(blobUrl: string) {
+    if (!blobUrl) return;
+    const response = await fetch(blobUrl);
+    const blob = await response.blob();
+    
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64 = reader.result as string;
+            // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
+            const base64Data = base64.split(',')[1];
+            resolve(base64Data);
+        };
+        reader.readAsDataURL(blob);
+    });
+}
+
+$: {
+    if($imageUrls.length == 0) selectedPage.set("listing")
+    if ($imageUrls.length === 1 && lastItem !== $imageUrls[0] && $imageUrls[0]) {
+        (async () => { 
+            const base64Buffer = await blobUrlToBase64($imageUrls[0] + "");
+            console.log('Base64 length:', base64Buffer?.length);
+            
+            await fetch('/api/fmv', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageBuffer: base64Buffer })
+            });
+            
+            if(!$imageUrls[0]) return
+            lastItem = $imageUrls[0];
+        })();
+    }
+}
+
 
     function addAspect(event: KeyboardEvent) {
         if (event.key === 'Enter' && aspectInput.trim() !== '') {
