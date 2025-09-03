@@ -9,93 +9,126 @@ import fetch from 'node-fetch';
 class ComicPricingDetails {
 
     constructor() {
+        this.nonce = "05170f134e";
+        this.cookieString = '_uetvid=69431c60885c11f09e3ed3a63ed2256a; _uetsid=69427cb0885c11f09a0755e573dd8fab; _ga_513Y8DFYY6=GS2.1.s1756859093$o1$g1$t1756859102$j51$l1$h1436737572; _hjSessionUser_3319327=eyJpZCI6ImZkNGMwYzdlLWFhNmMtNTAwMS1iNWRjLTQ1ZTNjYjkxYjUyOCIsImNyZWF0ZWQiOjE3NTY4NTkwOTMyMTEsImV4aXN0aW5nIjp0cnVlfQ==; wordpress_logged_in_3ec223733b8b9c07d90148e056c02445=RandyPierce3%7C1759278300%7CThk7QjCOkD5YnP4zDkFee6Fr3GCMz7VXUM1XH7ATl9r%7Cec6a7dd3020fe3f12c5f1c0f589cd2aa29d16f4c915cf4682d1bdb4ea1fea9da; cerber_groove_x_ZdGPujmESNaRIeDLJ3inqroh2Ul=KDS0cYpw97QPo5GvWkACfbs4TFxuL; _ga=GA1.1.1356458747.1756859093; cerber_groove=4a57d74e44eaa03b4c0ee4759b826630; _fbp=fb.1.1756859093273.982139327452889456; _hjSession_3319327=eyJpZCI6ImFmYjE5OWU1LTZiNmEtNDNiYS1hZDAwLTYyYmM1Y2I4YWJlOCIsImMiOjE3NTY4NTkwOTMyMTIsInMiOjAsInIiOjAsInNiIjowLCJzciI6MCwic2UiOjAsImZzIjoxLCJzcCI6MH0=; FpIqTngBYuH=feyYFpCBN6Eq3; PHPSESSID=lnehat62n0ln5pnuatf3u0vq15; _gcl_au=1.1.1631005936.1756859093; db-axIQXj_=DqUBynKso95vr%2AAJ; RYGSoEPHnVCbUix=s3%5BQRf'
     }
 
 
     async grabData(imageBuffer: Buffer | Uint8Array, isPng: boolean) {
-    try {
-        const topResult = await this.searchPriceCharting(imageBuffer, true);
-        const title = topResult.name;
-        console.log(title);
+        try {
+            const topResult = await this.searchPriceCharting(imageBuffer, true);
+            const title = topResult.name;
+            console.log(title);
 
-        const searchResults = await this.requestCovrSearch(title);
-        // console.log(searchResults.series)
-        let resultsObj: any = {}
-        const formattedResults = searchResults.issuesES.hits.hits.forEach((v: { _id: string; _score: any; }) => {resultsObj[v['_id']] = {id: v['_id'], score: v["_score"]}}).sort((a: { score: number; },b: { score: number; }) => a.score - b.score)
-        searchResults.issues.forEach(v => {
-            resultsObj[v.id] = {...resultsObj[v.id], image: v.full_image, seriesSlug: v.slug, publisher: v.publisher, title: v.title, searchTitle: title  }
-        })
-        console.log(title, formattedResults)
-        // const resultVals = Object.values(searchResults.series[0]);
-        const imageBuffers: ArrayBuffer[] = [];
+            const searchResults = await this.requestCovrSearch(title);
+            let resultsObj: any = {}
+            
+            // Fix the mapping logic - you don't need formattedResults if you're not using it
+            searchResults.issuesES.hits.hits.forEach((v: { _id: string; _score: any; }) => {
+                resultsObj[v['_id']] = {id: v['_id'], score: v["_score"]};
+            });
 
-        // // Download all images with error handling
-        // for (const val of resultVals) {
-        //     try {
-        //         const imageResponse = await fetch(val.image);
-        //         if (!imageResponse.ok) {
-        //             console.warn(`Failed to fetch image: ${val.image}`);
-        //             continue;
-        //         }
-        //         const imageData = await imageResponse.arrayBuffer();
-        //         imageBuffers.push(imageData);
-        //     } catch (error) {
-        //         console.warn(`Error fetching image ${val.image}:`, error);
-        //         // Push null or skip this image
-        //         imageBuffers.push(new ArrayBuffer(0)); // placeholder
-        //     }
-        // }
+            searchResults.issues.forEach(v => {
+                resultsObj[v.id] = {
+                    ...resultsObj[v.id], 
+                    image: v.full_image, 
+                    seriesSlug: v.slug, 
+                    publisher: v.publisher, 
+                    title: v.title, 
+                    searchTitle: title, 
+                    variant_name: v.variant_name, 
+                    variant_of: v.variant_of, 
+                    sold: {
+                        raw: v.raw_fmv_value,
+                        graded: v.graded_fmv_value
+                    }
+                };
+            });
 
-        // // Ensure we have images to compare
-        // if (imageBuffers.length === 0) {
-        //     console.warn('No images downloaded for comparison');
-        //     return null;
-        // }
+            const imageUrls = Object.values(resultsObj)
+                .map(v => v.image ? {image: v.image, id: v.id} : null)
+                .filter(v => v !== null);
 
-        // // Convert buffers properly for JSON
-        // const compareResponse = await fetch('http://localhost:5000/api/compare', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify({
-        //         target_image: Array.from(new Uint8Array(imageBuffer)),
-        //         comparison_images: imageBuffers.map((buf) => Array.from(new Uint8Array(buf)))
-        //     })
-        // });
+            // Keep track of successful downloads with their original indices
+            const imageBuffers: ArrayBuffer[] = [];
+            const successfulIndices: number[] = [];
 
-        // if (!compareResponse.ok) {
-        //     throw new Error(`Compare API failed: ${compareResponse.status} ${compareResponse.statusText}`);
-        // }
+            // Download all images with error handling
+            for (let i = 0; i < imageUrls.length; i++) {
+                const d = imageUrls[i];
+                try {
+                    const imageResponse = await fetch(d.image);
+                    if (!imageResponse.ok) {
+                        console.warn(`Failed to fetch image: ${d.image}, status: ${imageResponse.status}`);
+                        continue;
+                    }
+                    const imageData = await imageResponse.arrayBuffer();
+                    imageBuffers.push(imageData);
+                    successfulIndices.push(i); // Track which original index this corresponds to
+                } catch (error) {
+                    console.warn(`Error fetching image ${d.image}:`, error);
+                }
+            }
 
-        // const compareData = await compareResponse.json();
-        // console.log(compareData);
+            // Ensure we have images to compare
+            if (imageBuffers.length === 0) {
+                console.warn('No images downloaded for comparison');
+                if(imageUrls.length === 0) console.warn('No images found from search');
+                if(imageUrls.length > 0) console.warn('Images found from search but failed to download any');
+                return null;
+            }
 
-        // if (!compareData || compareData.length === 0) {
-        //     console.warn('No comparison data returned');
-        //     return null;
-        // }
+            // Convert buffers properly for JSON
+            const compareResponse = await fetch('http://localhost:5000/api/compare', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    target_image: Array.from(new Uint8Array(imageBuffer)),
+                    comparison_images: imageBuffers.map((buf) => Array.from(new Uint8Array(buf)))
+                })
+            });
 
-        // // Find best match (assuming lower score = better match)
-        // const bestMatchIndex = compareData.reduce((bestIndex: number, currentValue: number, currentIndex: number, array: number[]) => {
-        //     return currentValue < array[bestIndex] ? currentIndex : bestIndex;
-        // }, 0);
+            if (!compareResponse.ok) {
+                throw new Error(`Compare API failed: ${compareResponse.status} ${compareResponse.statusText}`);
+            }
 
-        // console.log(`Best match index: ${bestMatchIndex}, Similarity score: ${compareData[bestMatchIndex]}`);
-        
-        // const bestMatch = resultVals[bestMatchIndex];
-        // const fmv = await this.fetchIssueSales(bestMatch.issue_id, 'raw', 1);
-        
-        // return { 
-        //     ...bestMatch, 
-        //     fmv: fmv,
-        //     similarityScore: compareData[bestMatchIndex]
-        // };
+            const compareData = await compareResponse.json();
+            console.log(compareData);
 
-    } catch (error) {
-        console.error('Error in grabData:', error);
-        throw error; // or return null based on your error handling strat
+            if (!compareData || compareData.length === 0) {
+                console.warn('No comparison data returned');
+                return null;
+            }
 
+            // Find best match (assuming lower score = better match)
+            const bestMatchIndex = compareData.reduce((bestIndex: number, currentValue: number, currentIndex: number, array: number[]) => {
+                return currentValue < array[bestIndex] ? currentIndex : bestIndex;
+            }, 0);
 
-    }
+            // Map back to the original imageUrls index
+            const originalIndex = successfulIndices[bestMatchIndex];
+            const bestMatchId = imageUrls[originalIndex].id;
+            const bestMatch = resultsObj[bestMatchId];
+            
+            // Wrap the fetchIssueSales call in try-catch
+            let fmv;
+            try {
+                fmv = await this.fetchIssueSales(bestMatch.id, 'raw', 1);
+            } catch (error) {
+                console.warn('Failed to fetch issue sales:', error);
+                fmv = null;
+            }
+            
+            return { 
+                ...bestMatch, 
+                fmv: fmv,
+                similarityScore: compareData[bestMatchIndex]
+            };
+
+        } catch (error) {
+            console.error('Error in grabData:', error);
+            throw error;
+        }
 }
     /**
      * 
@@ -337,40 +370,184 @@ class ComicPricingDetails {
         return itemData;
     }
 
+    async covrPriceLogin() {
 
-   
-    async requestCovrSearch(title: string | number | boolean) {
-        const filters = {showVariants: true, query: title, sort: false}
-        const referrer = `https://covrprice.com/search/?search=${encodeURIComponent(title)}`;
-        const encodedFilters = Buffer.from(JSON.stringify(filters), 'utf-8').toString('base64')
-        // Use the original hardcoded filters value
-
-        const url = `https://covrprice.com/wp-json/covr/v1/search/issues?filters=${encodedFilters}&page=1&per_page=50`;
-
-        const res = await fetch(url, {
-            "headers": {
-                "accept": "*/*",
-                "accept-language": "en-US,en;q=0.9",
-                "priority": "u=1, i",
-                "sec-fetch-dest": "empty",
-                "sec-fetch-mode": "cors",
-                "sec-fetch-site": "same-origin",
-                "x-wp-nonce": "2a12166268", // You might need to get this dynamically
-                "cookie": "RYGSoEPHnVCbUix=s3%5BQRf; db-axIQXj_=DqUBynKso95vr%2AAJ; FpIqTngBYuH=feyYFpCBN6Eq3; PHPSESSID=2usbp1f8s6dvtqt30uqgf1o9fg; _gcl_au=1.1.1018300778.1756736103; _ga=GA1.1.334335442.1756736105; cerber_groove=4a57d74e44eaa03b4c0ee4759b826630; cerber_groove_x_ZdGPujmESNaRIeDLJ3inqroh2Ul=KDS0cYpw97QPo5GvWkACfbs4TFxuL; wordpress_logged_in_3ec223733b8b9c07d90148e056c02445=RandyPierce3%7C1759155365%7CTlkUYvxHdVvO0NR4xb3l7KhveOHlUo2wy1fQmxMlSQk%7Ca0ef412b773cc5636dedd68e5bfaae77bf198fd15b1c38f7485249700ce31bab; _hjSession_3319327=eyJpZCI6IjA0MzM1M2FjLTU0N2ItNDk4ZS1iYzEyLTI2OWEwYmJkNDNkOSIsImMiOjE3NTY3MzYxODAyMDcsInMiOjAsInIiOjAsInNiIjowLCJzciI6MCwic2UiOjAsImZzIjoxLCJzcCI6MH0=; _hjSessionUser_3319327=eyJpZCI6ImJiYTVkZDJjLTgyNGYtNWJkYy04NTc3LTUxNmNjY2U2MGNlOCIsImNyZWF0ZWQiOjE3NTY3MzYxODAyMDQsImV4aXN0aW5nIjp0cnVlfQ==; _uetsid=0f1d2c90873e11f0aebe4f4e32ad8af8; _uetvid=0f1d5000873e11f0a2cb53baeff59d37; _ga_513Y8DFYY6=GS2.1.s1756739665$o2$g1$t1756739691$j34$l1$h1046193603"
-                },
-            "referrer": referrer,
-            "referrerPolicy": "strict-origin-when-cross-origin",
-            "body": null,
-            "method": "GET",
-            "mode": "cors",
-            "credentials": "include"
-        });
-
-        console.log(res.status);
-        const body = await res.json();
-        console.log(body);
-        return body; // Return the response so you can use it
     }
+
+
+    async loginToCovrPrice(username, password) {
+        let browser;
+        
+        try {
+            // Launch browser
+            browser = await puppeteer.launch({
+                headless: false, // Set to true for headless mode
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu'
+                ]
+            });
+
+            const page = await browser.newPage();
+            
+            // Set user agent to avoid bot detection
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+            
+            // Set viewport
+            await page.setViewport({ width: 1366, height: 768 });
+
+            console.log('Navigating to login page...');
+            
+            // Navigate to login page
+            await page.goto('https://covrprice.com/login/', {
+                waitUntil: 'networkidle2',
+                timeout: 30000
+            });
+
+            console.log('Waiting for form elements...');
+            
+            // Wait for the form elements to be present
+            await page.waitForSelector('#acf-field_63a33b33670c3', { timeout: 10000 });
+            await page.waitForSelector('#password', { timeout: 10000 });
+            await page.waitForSelector('input[type="submit"]', { timeout: 10000 });
+
+            console.log('Filling out login form...');
+            
+            // Fill in the username/email field
+            await page.type('#acf-field_63a33b33670c3', username, { delay: 100 });
+            
+            // Fill in the password field
+            await page.type('#password', password, { delay: 100 });
+
+            console.log('Submitting form...');
+            
+            // Submit the form and wait for navigation
+            await Promise.all([
+                page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
+                page.click('input[type="submit"]')
+            ]);
+
+            console.log('Login completed, navigating to homepage for nonce...');
+            
+            // Navigate to homepage to get the nonce
+            await page.goto('https://covrprice.com/', {
+                waitUntil: 'networkidle2',
+                timeout: 30000
+            });
+
+            console.log('Extracting nonce from homepage...');
+            
+            // Extract nonce from dashboardSettings
+            const nonce = await page.evaluate(() => {
+                // Try to get nonce from dashboardSettings
+                if (window.dashboardSettings && window.dashboardSettings.nonce) {
+                    return window.dashboardSettings.nonce;
+                }
+                
+                // Fallback: Look for it in script tags
+                const scripts = document.querySelectorAll('script');
+                for (const script of scripts) {
+                    const content = script.textContent || script.innerHTML;
+                    const match = content.match(/dashboardSettings\s*=\s*{[^}]*"nonce"\s*:\s*"([^"]+)"/);
+                    if (match) {
+                        return match[1];
+                    }
+                }
+                
+                return null;
+            });
+            
+            // Get cookies
+            const cookies = await page.cookies();
+            const cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
+            
+            // Set class properties
+            this.cookieString = cookieString;
+            this.nonce = nonce;
+            
+            console.log('Extraction completed!');
+            console.log('Cookie String:', this.cookieString);
+            console.log('Nonce:', this.nonce);
+            
+            return {
+                cookieString: this.cookieString,
+                nonce: this.nonce
+            };
+
+        } catch (error) {
+            console.error('Error during login process:', error);
+            this.cookieString = null;
+            this.nonce = null;
+            return {
+                cookieString: null,
+                nonce: null,
+                error: error.message
+            };
+        } finally {
+            if (browser) {
+                await browser.close();
+            }
+        }
+    }
+   
+    async requestCovrSearch(title: string | number | boolean, times = 0) {
+    const filters = {showVariants: true, query: title, sort: false}
+    const referrer = `https://covrprice.com/search/?search=${encodeURIComponent(title)}`;
+    const encodedFilters = Buffer.from(JSON.stringify(filters), 'utf-8').toString('base64')
+    const url = `https://covrprice.com/wp-json/covr/v1/search/issues?filters=${encodedFilters}&page=1&per_page=50`;
+    
+    const res = await fetch(url, {
+        "headers": {
+            "accept": "*/*",
+            "accept-language": "en-US,en;q=0.9",
+            "priority": "u=1, i",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "same-origin",
+            "x-wp-nonce": this.nonce,
+            "cookie": this.cookieString
+        },
+        "referrer": referrer,
+        "referrerPolicy": "strict-origin-when-cross-origin",
+        "body": null,
+        "method": "GET",
+        "mode": "cors",
+        "credentials": "include"
+    });
+
+    console.log(res.status);
+    
+    // Handle 403 (unauthorized) - try to re-login once
+    if (res.status === 403 && times < 1) { 
+        console.log('Got 403, attempting to re-login...');
+        const result = await this.loginToCovrPrice('randypierce3@yahoo.com', 'Terrax9636');
+        
+        if (result.error) {
+            console.log('Re-login failed:', result.error);
+            throw new Error(`Login failed: ${result.error}`);
+        }
+        
+        console.log('Re-login successful. New credentials:', this.cookieString, this.nonce);
+        return await this.requestCovrSearch(title, times + 1);
+    }
+    
+    // Handle other error statuses
+    if (!res.ok) {
+        console.log(`Request failed with status ${res.status}`);
+        const errorText = await res.text().catch(() => 'Unable to read error response');
+        throw new Error(`HTTP ${res.status}: ${errorText}`);
+    }
+    
+    // Success case
+    const body = await res.json();
+    console.log(body);
+    return body;
+}
 
     /**
      * @param {*} issueId
