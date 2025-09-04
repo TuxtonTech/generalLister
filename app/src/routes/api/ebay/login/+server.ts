@@ -1,4 +1,4 @@
-import { redirect } from "@sveltejs/kit";
+import { redirect, json } from "@sveltejs/kit";
 
 const CLIENT_ID = 'TuxtonTe-Sourcere-PRD-5755ec4ee-8cae39a6';
 
@@ -16,7 +16,9 @@ async function navigateToEbayLogin() {
 export async function GET() {
     try {
         const authUrl = await navigateToEbayLogin()
-        throw redirect(301, authUrl)
+        return new Response(JSON.stringify({ authUrl }), {
+            headers: { 'content-type': 'application/json' }
+        });
     } catch(error) {
         if (error && typeof error === 'object' && 'status' in error && error.status >= 300 && error.status < 400) {
             throw error;

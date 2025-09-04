@@ -51,7 +51,7 @@
       accountData.password = formData.password; // In real app, hash this
     } else if (formData.type === 'ebay') {
       accountData.oauthConnected = isConnectingEbay;
-      accountData.oauthToken = isConnectingEbay ? 'mock_oauth_token' : null;
+      // accountData.oauthToken = isConnectingEbay ? 'mock_oauth_token' : null;
     }
     
     accountsStore.add(accountData);
@@ -65,11 +65,26 @@
     
     // Simulate OAuth flow
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch('/api/ebay/login');
+      if (!response.ok) throw new Error('Failed to initiate eBay OAuth');   
+      const { authUrl } = await response.json();
+
+      await loadEbayOAuthWindow(authUrl);
+
       alert('Successfully connected to eBay!\n(This is a simulation)');
     } catch (error) {
       alert('Failed to connect to eBay');
       isConnectingEbay = false;
+    }
+  }
+
+  async function loadEbayOAuthWindow(authUrl) {
+    const w = window.open(authUrl, '_blank', 'width=600,height=700');
+  
+    if (w) {
+      w.addEventListener('popstate', () => {
+        w.close();
+      });
     }
   }
   
