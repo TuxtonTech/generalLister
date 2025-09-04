@@ -3,7 +3,7 @@ import { redirect, json } from "@sveltejs/kit";
 const CLIENT_ID = 'TuxtonTe-Sourcere-PRD-5755ec4ee-8cae39a6';
 
 
-const REDIRECT_URI = 'https://tuxtontech.com/authenticate'
+const REDIRECT_URI = 'https://tuxtontech.com/api/ebay/authentication'
 
 const AUTHORIZATION_ENDPOINT = 'https://auth.ebay.com/oauth2/authorize';
 
