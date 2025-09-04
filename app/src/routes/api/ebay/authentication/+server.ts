@@ -1,22 +1,13 @@
-
-import QueryString from 'qs'
-import {json, redirect} from '@sveltejs/kit'
+import QueryString from 'qs';
 const CLIENT_ID = 'TuxtonTe-Sourcere-PRD-5755ec4ee-8cae39a6';
 const CLIENT_SECRET = 'PRD-755ec4eef06a-daee-44d7-a153-2de8';
-const auth64Base = (Buffer.from(CLIENT_ID + ':' + CLIENT_SECRET)).toString('base64')
-
-
-const REDIRECT_URI = 'https://tuxtontech.com/authenticate'
-
-const AUTHORIZATION_ENDPOINT = 'https://auth.ebay.com/oauth2/authorize';
+const REDIRECT_URI = 'https://tuxtontech.com/authenticate';
 const TOKEN_ENDPOINT = 'https://api.ebay.com/identity/v1/oauth2/token';
+const auth64Base = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
 
-
-async function authenticateEbayUser(req: any) {
-    const { code } = req.query;
-
+async function authenticateEbayUser(code: string) {
     const response = await fetch(TOKEN_ENDPOINT, {
-        method: "POST",
+        method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             'Authorization': `Basic ${auth64Base}`
@@ -33,47 +24,44 @@ async function authenticateEbayUser(req: any) {
     const { access_token, refresh_token, expires_in } = await response.json();
 
     const userInfoResponse = await fetch("https://apiz.ebay.com/commerce/identity/v1/user/", {
-        method: "GET",
-        headers: {
-            'Authorization': `Bearer ${access_token}`
-        }
+        headers: { 'Authorization': `Bearer ${access_token}` }
     });
 
-    const userReqData = await userInfoResponse.json();
+    const { userId, username } = await userInfoResponse.json();
 
-    const userId = userReqData.userId;
-    const username = userReqData.username;
-    
-    const userData = {
+    return {
         userId,
-        "name": username,
+        name: username,
+        type: "ebay",
         oauthConnected: true,
         oAuthToken: access_token,
         refresh_token,
-        expires_in,
-        type: "ebay",
-    }
-
-    return userData
+        expires_in
+    };
 }
 
-
-export async function GET({req}) {
+export async function GET(event) {
     try {
-        const userData = await authenticateEbayUser(req)
-        setHeaders({
-            'Set-Cookie': `userCookie=${encodeURIComponent(JSON.stringify(userData))}; Path=/; SameSite=Lax`
+        const code = event.url.searchParams.get('code');
+        if (!code) throw new Error('No code provided');
+
+        const userData = await authenticateEbayUser(code);
+
+        // Set cookie via event.cookies
+        event.cookies.set('userCookie', JSON.stringify(userData), {
+            path: '/',
+            sameSite: 'lax'
         });
 
-        // Return minimal HTML that closes the popup
+        // Return minimal HTML to close popup
         return new Response(`
             <script>
                 window.opener.postMessage('ebay-auth-success', window.location.origin);
                 window.close();
             </script>
         `, { headers: { 'Content-Type': 'text/html' } });
-        // return json({status: 200, data: userData})
+
     } catch (error) {
-        
+        return new Response(`Error: ${error.message}`, { status: 500 });
     }
 }
