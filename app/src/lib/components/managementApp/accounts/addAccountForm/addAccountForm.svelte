@@ -68,8 +68,8 @@
       const response = await fetch('/api/ebay/login');
       if (!response.ok) throw new Error('Failed to initiate eBay OAuth');   
       const { authUrl } = await response.json();
-
-      await loadEbayOAuthWindow(authUrl);
+      console.log(authUrl)
+      await loadEbayOAuthWindow('https://auth2.ebay.com/oauth2/consents?client_id=TuxtonTe-Sourcere-PRD-5755ec4ee-8cae39a6&redirect_uri=Tuxton_Technolo-TuxtonTe-Source-avzxks&scope=https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.marketing.readonly+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.marketing+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.inventory.readonly+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.inventory+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.account.readonly+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.account+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.fulfillment.readonly+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.fulfillment+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.analytics.readonly+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.finances+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.payment.dispute+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fcommerce.identity.readonly+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.reputation+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.reputation.readonly+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fcommerce.notification.subscription+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fcommerce.notification.subscription.readonly+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.stores+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fsell.stores.readonly+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fscope%2Fsell.edelivery+https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope%2Fcommerce.vero&state&response_type=code&hd&consentGiven=false');
 
       alert('Successfully connected to eBay!\n(This is a simulation)');
     } catch (error) {
@@ -79,13 +79,18 @@
   }
 
   async function loadEbayOAuthWindow(authUrl) {
-    const w = window.open(authUrl, '_blank', 'width=600,height=700');
-  
-    if (w) {
-      w.addEventListener('popstate', () => {
-        w.close();
-      });
-    }
+    const popup = window.open(authUrl, '_blank', 'width=600,height=700');
+    const interval = setInterval(() => {
+        const cookie = document.cookie.split('; ').find(c => c.startsWith('userCookie='));
+        if (cookie) {
+            clearInterval(interval);
+            const userData = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
+            accountsStore.add(userData);
+            popup?.close();
+            return
+          }
+    }, 500);
+    
   }
   
   function resetForm() {

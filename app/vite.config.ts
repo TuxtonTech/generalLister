@@ -12,5 +12,10 @@ export default defineConfig({
 			key: fs.readFileSync('/etc/letsencrypt/live/tuxtontech.com/privkey.pem', 'utf8'),
 			cert: fs.readFileSync('/etc/letsencrypt/live/tuxtontech.com/fullchain.pem', 'utf8')
 		}
-	}
+	},
+	build: {
+    rollupOptions: {
+      external: ["qs"]
+    }
+  }
 });

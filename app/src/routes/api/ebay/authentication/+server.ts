@@ -1,5 +1,4 @@
 
-import { accountsStore } from '$lib/store/app/accounts/accounts.js';
 import QueryString from 'qs'
 import {json, redirect} from '@sveltejs/kit'
 const CLIENT_ID = 'TuxtonTe-Sourcere-PRD-5755ec4ee-8cae39a6';
@@ -62,8 +61,17 @@ async function authenticateEbayUser(req: any) {
 export async function GET({req}) {
     try {
         const userData = await authenticateEbayUser(req)
-        accountsStore.add(userData)
-        throw redirect(301, '/app')
+        setHeaders({
+            'Set-Cookie': `userCookie=${encodeURIComponent(JSON.stringify(userData))}; Path=/; SameSite=Lax`
+        });
+
+        // Return minimal HTML that closes the popup
+        return new Response(`
+            <script>
+                window.opener.postMessage('ebay-auth-success', window.location.origin);
+                window.close();
+            </script>
+        `, { headers: { 'Content-Type': 'text/html' } });
         // return json({status: 200, data: userData})
     } catch (error) {
         
