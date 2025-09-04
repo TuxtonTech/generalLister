@@ -59,39 +59,36 @@
     dispatch('accountAdded');
     selectedPage.set('accounts')
   }
-  
   async function handleEbayConnect() {
     isConnectingEbay = true;
-    
-    // Simulate OAuth flow
+
     try {
-      const response = await fetch('/api/ebay/login');
-      if (!response.ok) throw new Error('Failed to initiate eBay OAuth');   
-      const { authUrl } = await response.json();
-      console.log(authUrl)
-      await loadEbayOAuthWindow(authUrl);
+        const response = await fetch('/api/ebay/login'); // returns authUrl
+        if (!response.ok) throw new Error('Failed to initiate eBay OAuth');
 
-      alert('Successfully connected to eBay!\n(This is a simulation)');
+        const { authUrl } = await response.json();
+        const popup = window.open(authUrl, '_blank', 'width=600,height=700');
+
+        // Listen for success message from popup
+        function handleMessage(event) {
+            if (event.origin !== window.location.origin) return;
+            if (event.data.type === 'ebay-auth-success') {
+                accountsStore.add(event.data.user);
+                popup?.close();
+                window.removeEventListener('message', handleMessage);
+                isConnectingEbay = false;
+                alert('Successfully connected to eBay!');
+            }
+        }
+
+        window.addEventListener('message', handleMessage);
+
     } catch (error) {
-      alert('Failed to connect to eBay');
-      isConnectingEbay = false;
+        alert('Failed to connect to eBay');
+        isConnectingEbay = false;
     }
-  }
+}
 
-  async function loadEbayOAuthWindow(authUrl) {
-    const popup = window.open(authUrl, '_blank', 'width=600,height=700');
-    const interval = setInterval(() => {
-        const cookie = document.cookie.split('; ').find(c => c.startsWith('userCookie='));
-        if (cookie) {
-            clearInterval(interval);
-            const userData = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
-            accountsStore.add(userData);
-            popup?.close();
-            return
-          }
-    }, 500);
-    
-  }
   
   function resetForm() {
     formData = {
