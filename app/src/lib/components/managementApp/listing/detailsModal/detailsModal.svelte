@@ -15,43 +15,117 @@
     let listingAspects: string[] = [];
     let lastItem: string = ''
 
+    // Loading state for FMV lookup
+    let isLoadingFMV: boolean = false;
+    let fmvData: any = null;
 
     async function blobUrlToBase64(blobUrl: string) {
-    if (!blobUrl) return;
-    const response = await fetch(blobUrl);
-    const blob = await response.blob();
-    
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64 = reader.result as string;
-            // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
-            const base64Data = base64.split(',')[1];
-            resolve(base64Data);
-        };
-        reader.readAsDataURL(blob);
-    });
-}
-
-$: {
-    if($imageUrls.length == 0) selectedPage.set("listing")
-    if ($imageUrls.length === 1 && lastItem !== $imageUrls[0] && $imageUrls[0]) {
-        (async () => { 
-            const base64Buffer = await blobUrlToBase64($imageUrls[0] + "");
-            console.log('Base64 length:', base64Buffer?.length);
-            
-            await fetch('/api/fmv', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBuffer: base64Buffer })
-            });
-            
-            if(!$imageUrls[0]) return
-            lastItem = $imageUrls[0];
-        })();
+        if (!blobUrl) return;
+        const response = await fetch(blobUrl);
+        const blob = await response.blob();
+        
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64 = reader.result as string;
+                // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
+                const base64Data = base64.split(',')[1];
+                resolve(base64Data);
+            };
+            reader.readAsDataURL(blob);
+        });
     }
-}
 
+    function fillFormFromFMVData(data: any) {
+        // Fill title - combine publisher, title, and variant info
+        let autoTitle = '';
+        if (data.publisher) autoTitle += data.publisher + ' ';
+        if (data.title) autoTitle += data.title;
+        if (data.variant_name) autoTitle += ` (${data.variant_name})`;
+        title = autoTitle.trim();
+
+        // Fill price based on FMV data
+        if (data.fmv && data.fmv.length > 0) {
+            // Use the most recent sale or average
+            const latestSale = data.fmv[0];
+            if (latestSale.price) {
+                price = parseFloat(latestSale.price);
+            }
+        } else if (data.sold?.raw) {
+            // Fallback to raw FMV value
+            price = parseFloat(data.sold.raw);
+        }
+
+        // Set default quantity
+        if (!quantity) quantity = 1;
+
+        // Generate description from available data
+        let autoDescription = '';
+        if (data.publisher) autoDescription += `Publisher: ${data.publisher}\n`;
+        if (data.title) autoDescription += `Series: ${data.title}\n`;
+        if (data.variant_name) autoDescription += `Variant: ${data.variant_name}\n`;
+        if (data.similarityScore) {
+            autoDescription += `Match Confidence: ${(data.similarityScore * 100).toFixed(1)}%\n`;
+        }
+        if (data.fmv && data.fmv.length > 0) {
+            autoDescription += `Recent Sales Available: ${data.fmv.length} sales found\n`;
+        }
+        description = autoDescription.trim();
+
+        // Auto-add relevant aspects/tags
+        const autoAspects = [];
+        if (data.publisher) autoAspects.push(data.publisher);
+        if (data.variant_name) autoAspects.push(data.variant_name);
+        if (data.sold?.graded && parseFloat(data.sold.graded) > 0) autoAspects.push('Graded');
+        
+        // Add aspects that aren't already in the list
+        autoAspects.forEach(aspect => {
+            if (!listingAspects.includes(aspect)) {
+                listingAspects = [...listingAspects, aspect];
+            }
+        });
+    }
+
+    $: {
+        if($imageUrls.length == 0) selectedPage.set("listing")
+        if ($imageUrls.length === 1 && lastItem !== $imageUrls[0] && $imageUrls[0]) {
+            (async () => { 
+                try {
+                    isLoadingFMV = true;
+                    fmvData = null;
+                    
+                    const base64Buffer = await blobUrlToBase64($imageUrls[0] + "");
+                    console.log('Base64 length:', base64Buffer?.length);
+                    
+                    const result = await fetch('/api/fmv', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imageBuffer: base64Buffer })
+                    });
+
+                    if (result.ok) {
+                        const data = await result.json();
+                        console.log('FMV API Response:', data);
+                        
+                        fmvData = data;
+                        
+                        // Auto-fill the form with the returned data
+                        fillFormFromFMVData(data);
+                        
+                    } else {
+                        console.error('FMV API error:', result.status, result.statusText);
+                    }
+                } catch (error) {
+                    console.error('Error calling FMV API:', error);
+                } finally {
+                    isLoadingFMV = false;
+                }
+
+                if(!$imageUrls[0]) return
+                lastItem = $imageUrls[0];
+            })();
+        }
+    }
 
     function addAspect(event: KeyboardEvent) {
         if (event.key === 'Enter' && aspectInput.trim() !== '') {
@@ -80,9 +154,17 @@ $: {
             listingAspects,
             description,
             selectedMarketplaces: marketplaces.filter(m => m.selected).map(m => m.name),
+            fmvData: fmvData // Include the original FMV data for reference
         };
         console.log('Form data submitted:', formData);
         alert('Form submitted! Check the console for the data.');
+    }
+
+    // Function to manually refresh FMV data
+    function refreshFMV() {
+        if ($imageUrls[0]) {
+            lastItem = ''; // Reset to trigger the reactive statement
+        }
     }
 </script>
 
@@ -92,6 +174,24 @@ $: {
     <div class="quadrant info-quadrant" style="grid-area: info;">
         <div class="quadrant-content">
             <h3>Basic Information</h3>
+            
+            <!-- Loading indicator -->
+            {#if isLoadingFMV}
+                <div class="loading-indicator">
+                    <span>🔍 Analyzing image and fetching market data...</span>
+                </div>
+            {/if}
+
+            <!-- FMV Data Summary -->
+            {#if fmvData}
+                <div class="fmv-summary">
+                    <small>
+                        Auto-filled from image analysis 
+                        (Confidence: {(fmvData.similarityScore * 100).toFixed(1)}%)
+                        <button type="button" on:click={refreshFMV} class="refresh-btn" title="Refresh data">🔄</button>
+                    </small>
+                </div>
+            {/if}
             
             <div class="form-group">
                 <label for="title">Title</label>
@@ -629,5 +729,43 @@ $: {
 
     .quadrant-content::-webkit-scrollbar-track {
         background: transparent;
+    }
+
+
+     .loading-indicator {
+        background: #f0f9ff;
+        border: 1px solid #0ea5e9;
+        border-radius: 4px;
+        padding: 8px 12px;
+        margin-bottom: 12px;
+        font-size: 14px;
+        color: #0369a1;
+    }
+
+    .fmv-summary {
+        background: #f0fdf4;
+        border: 1px solid #22c55e;
+        border-radius: 4px;
+        padding: 8px 12px;
+        margin-bottom: 12px;
+        font-size: 12px;
+        color: #166534;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .refresh-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        margin-left: 8px;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+    }
+
+    .refresh-btn:hover {
+        opacity: 1;
     }
 </style>

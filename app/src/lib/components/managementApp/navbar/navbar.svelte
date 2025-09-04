@@ -19,6 +19,7 @@
         <img src="https://tuxtontech.com/assets/imgs/egeus.png" alt="Logo">
         <button on:click={() => navigateAndClose('listing')}>Sell</button>
         <button on:click={() => navigateAndClose('listings')}>Listings</button>
+        <button on:click={() => navigateAndClose('accounts')}>Accounts</button>
     </div>
     <div>
         <button on:click={() => navigateAndClose('settings')}>Settings</button>
