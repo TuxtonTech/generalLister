@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   
   export let account;
-  
+    
   const dispatch = createEventDispatcher();
   let showPassword = false;
   
@@ -90,8 +90,15 @@
     position: relative;
     /* overflow: hidden; */
     height: fit-content;
-    width: fit-content;
     margin-bottom: .5rem;
+  }
+
+  @media (max-width: 600px) {
+    .account-card {
+      /* flex-direction: column; */
+      /* gap: 1rem; */
+          width: fit-content;
+    }
   }
   
   .account-card::before {
