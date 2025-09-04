@@ -4,9 +4,44 @@ import FormData from 'form-data';
 import path from 'path';
 import fetch from 'node-fetch';
 
+interface ComparisonResult {
+index: number;
+score: number;
+}
+
+interface CompareResponse {
+success: boolean;
+results: ComparisonResult[];
+total_comparisons: number;
+}
+
+interface ImageUrl {
+image: string;
+id: string;
+}
+
+interface ResultsObject {
+[key: string]: {
+    id: string;
+    score: number;
+    image?: string;
+    seriesSlug?: string;
+    publisher?: string;
+    title?: string;
+    searchTitle?: string;
+    variant_name?: string;
+    variant_of?: string;
+    sold?: {
+        raw: number;
+        graded: number;
+    };
+};
+}
 
 
 class ComicPricingDetails {
+    cookieString: string;
+    nonce: string;
 
     constructor() {
         this.nonce = "05170f134e";
@@ -14,122 +49,167 @@ class ComicPricingDetails {
     }
 
 
-    async grabData(imageBuffer: Buffer | Uint8Array, isPng: boolean) {
-        try {
-            const topResult = await this.searchPriceCharting(imageBuffer, true);
-            const title = topResult.name;
-            console.log(title);
 
-            const searchResults = await this.requestCovrSearch(title);
-            let resultsObj: any = {}
-            
-            // Fix the mapping logic - you don't need formattedResults if you're not using it
-            searchResults.issuesES.hits.hits.forEach((v: { _id: string; _score: any; }) => {
-                resultsObj[v['_id']] = {id: v['_id'], score: v["_score"]};
-            });
+async grabData(imageBuffer: Buffer | Uint8Array, isPng: boolean) {
+    try {
+        const topResult = await this.searchPriceCharting(imageBuffer, true);
+        const title = topResult.name;
+        console.log(`Search title: ${title}`);
 
-            searchResults.issues.forEach(v => {
-                resultsObj[v.id] = {
-                    ...resultsObj[v.id], 
-                    image: v.full_image, 
-                    seriesSlug: v.slug, 
-                    publisher: v.publisher, 
-                    title: v.title, 
-                    searchTitle: title, 
-                    variant_name: v.variant_name, 
-                    variant_of: v.variant_of, 
-                    sold: {
-                        raw: v.raw_fmv_value,
-                        graded: v.graded_fmv_value
-                    }
-                };
-            });
+        const searchResults = await this.requestCovrSearch(title);
+        let resultsObj: ResultsObject = {};
+        
+        // Build results object from search data
+        searchResults.issuesES.hits.hits.forEach((v: { _id: string; _score: number }) => {
+            resultsObj[v._id] = { id: v._id, score: v._score };
+        });
 
-            const imageUrls = Object.values(resultsObj)
-                .map(v => v.image ? {image: v.image, id: v.id} : null)
-                .filter(v => v !== null);
-
-            // Keep track of successful downloads with their original indices
-            const imageBuffers: ArrayBuffer[] = [];
-            const successfulIndices: number[] = [];
-
-            // Download all images with error handling
-            for (let i = 0; i < imageUrls.length; i++) {
-                const d = imageUrls[i];
-                try {
-                    const imageResponse = await fetch(d.image);
-                    if (!imageResponse.ok) {
-                        console.warn(`Failed to fetch image: ${d.image}, status: ${imageResponse.status}`);
-                        continue;
-                    }
-                    const imageData = await imageResponse.arrayBuffer();
-                    imageBuffers.push(imageData);
-                    successfulIndices.push(i); // Track which original index this corresponds to
-                } catch (error) {
-                    console.warn(`Error fetching image ${d.image}:`, error);
+        searchResults.issues.forEach((v: any) => {
+            resultsObj[v.id] = {
+                ...resultsObj[v.id], 
+                image: v.full_image, 
+                seriesSlug: v.slug, 
+                publisher: v.publisher, 
+                title: v.title, 
+                searchTitle: title, 
+                variant_name: v.variant_name, 
+                variant_of: v.variant_of, 
+                sold: {
+                    raw: v.raw_fmv_value,
+                    graded: v.graded_fmv_value
                 }
-            }
+            };
+        });
 
-            // Ensure we have images to compare
-            if (imageBuffers.length === 0) {
-                console.warn('No images downloaded for comparison');
-                if(imageUrls.length === 0) console.warn('No images found from search');
-                if(imageUrls.length > 0) console.warn('Images found from search but failed to download any');
-                return null;
-            }
+        // Extract image URLs and IDs
+        const imageUrls: ImageUrl[] = Object.values(resultsObj)
+            .map(v => v.image ? { image: v.image, id: v.id } : null)
+            .filter((v): v is ImageUrl => v !== null);
 
-            // Convert buffers properly for JSON
+        if (imageUrls.length === 0) {
+            console.warn('No images found from search results');
+            return null;
+        }
+
+        console.log(`Found ${imageUrls.length} images to compare`);
+
+        // Download images with error handling
+        const imageBuffers: ArrayBuffer[] = [];
+        const successfulIndices: number[] = [];
+
+        for (let i = 0; i < imageUrls.length; i++) {
+            const imageUrl = imageUrls[i];
+            try {
+                const imageResponse = await fetch(imageUrl.image, {
+                    timeout: 10000, // 10 second timeout
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (compatible; ImageComparer/1.0)'
+                    }
+                });
+                
+                if (!imageResponse.ok) {
+                    console.warn(`Failed to fetch image: ${imageUrl.image}, status: ${imageResponse.status}`);
+                    continue;
+                }
+                
+                const imageData = await imageResponse.arrayBuffer();
+                
+                // Validate that we got actual image data
+                if (imageData.byteLength === 0) {
+                    console.warn(`Empty image data from: ${imageUrl.image}`);
+                    continue;
+                }
+                
+                imageBuffers.push(imageData);
+                successfulIndices.push(i);
+                
+            } catch (error) {
+                console.warn(`Error fetching image ${imageUrl.image}:`, error);
+            }
+        }
+
+        if (imageBuffers.length === 0) {
+            console.warn('No images successfully downloaded for comparison');
+            return null;
+        }
+
+        console.log(`Successfully downloaded ${imageBuffers.length} images for comparison`);
+
+        // Call comparison API
+        try {
             const compareResponse = await fetch('http://localhost:5000/api/compare', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify({
                     target_image: Array.from(new Uint8Array(imageBuffer)),
-                    comparison_images: imageBuffers.map((buf) => Array.from(new Uint8Array(buf)))
+                    comparison_images: imageBuffers.map(buf => Array.from(new Uint8Array(buf)))
                 })
             });
 
             if (!compareResponse.ok) {
-                throw new Error(`Compare API failed: ${compareResponse.status} ${compareResponse.statusText}`);
+                const errorText = await compareResponse.text();
+                throw new Error(`Compare API failed: ${compareResponse.status} ${compareResponse.statusText} - ${errorText}`);
             }
 
-            const compareData = await compareResponse.json();
-            console.log(compareData);
-
-            if (!compareData || compareData.length === 0) {
-                console.warn('No comparison data returned');
+            const compareData: any = await compareResponse.json();
+            
+            if (!compareData.success || !compareData.results || compareData.results.length === 0) {
+                console.warn('No valid comparison results returned');
                 return null;
             }
 
-            // Find best match (assuming lower score = better match)
-            const bestMatchIndex = compareData.reduce((bestIndex: number, currentValue: number, currentIndex: number, array: number[]) => {
-                return currentValue < array[bestIndex] ? currentIndex : bestIndex;
-            }, 0);
+            console.log(`Comparison complete. Best match score: ${compareData.results[0].score.toFixed(4)}`);
 
-            // Map back to the original imageUrls index
-            const originalIndex = successfulIndices[bestMatchIndex];
-            const bestMatchId = imageUrls[originalIndex].id;
-            const bestMatch = resultsObj[bestMatchId];
+            // The results are already sorted by score (highest first = best match)
+            const bestResult = compareData.results[0];
             
-            // Wrap the fetchIssueSales call in try-catch
-            let fmv;
+            // Map back to original image URL index
+            const originalImageIndex = successfulIndices[bestResult.index];
+            const bestMatchId = imageUrls[originalImageIndex].id;
+            const bestMatch = resultsObj[bestMatchId];
+
+            if (!bestMatch) {
+                console.error(`Could not find match data for ID: ${bestMatchId}`);
+                return null;
+            }
+
+            // Fetch additional sales data
+            let fmv = null;
             try {
-                fmv = await this.fetchIssueSales(bestMatch.id, 'raw', 1);
+                fmv = await this.fetchIssueSales(bestMatch.id, 'graded', 1);
             } catch (error) {
-                console.warn('Failed to fetch issue sales:', error);
-                fmv = null;
+                console.warn(`Failed to fetch issue sales for ${bestMatch.id}:`, error);
             }
             
-            return { 
+            const result = { 
                 ...bestMatch, 
                 fmv: fmv,
-                similarityScore: compareData[bestMatchIndex]
+                similarityScore: bestResult.score,
+                comparisonStats: {
+                    totalFound: imageUrls.length,
+                    successfulDownloads: imageBuffers.length,
+                    bestMatchIndex: originalImageIndex
+                }
             };
 
-        } catch (error) {
-            console.error('Error in grabData:', error);
-            throw error;
+            console.log(`Best match: ${bestMatch.title} (${bestMatch.variant_name || 'main'}) - Score: ${bestResult.score.toFixed(4)}`);
+            
+            return result;
+
+        } catch (apiError) {
+            console.error('Error calling comparison API:', apiError);
+            throw apiError;
         }
+
+    } catch (error) {
+        console.error('Error in grabData:', error);
+        throw error;
+    }
 }
+
     /**
      * 
      * @param {*} imageBuffer 
@@ -555,7 +635,7 @@ class ComicPricingDetails {
      * @param {*} pageRef page number
      * @returns FMV data object
      */
-    async fetchIssueSales(issueId: any, tab = 'raw', pageRef = 1) {
+    async fetchIssueSales(issueId: any, tab = 'graded', pageRef = 1) {
   
         const browser = await puppeteer.launch({ headless: false });
         const page = await browser.newPage();
@@ -575,7 +655,7 @@ class ComicPricingDetails {
         await page.setCookie(...cookies);
   
         const url = `https://covrprice.com/issue-sales/?issue_id=${issueId}&tab=${tab}&page_ref=${pageRef}`;
-        await page.goto(url, { waitUntil: 'networkidle2' });
+        await page.goto(url);
   
         const result = await page.evaluate(() => {
             // Get both script elements
@@ -625,6 +705,10 @@ class ComicPricingDetails {
         await browser.close();
         return result;
     }
+
+
+
+    
 }
 
 export async function POST({ request }) {
