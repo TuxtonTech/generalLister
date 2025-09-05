@@ -3,7 +3,7 @@ import FormData from 'form-data';
 import path from 'path';
 import fetch from 'node-fetch';
 import { CookieJar } from 'tough-cookie';
-import fetchCookie from 'fetch-cookie/node-fetch';
+import fetchCookie from 'fetch-cookie';
 import cheerio from 'cheerio';
 
 interface ComparisonResult {
