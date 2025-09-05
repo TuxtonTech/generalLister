@@ -4,7 +4,7 @@ import path from 'path';
 import fetch from 'node-fetch';
 import { CookieJar } from 'tough-cookie';
 import fetchCookie from 'fetch-cookie';
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 
 interface ComparisonResult {
     index: number;
