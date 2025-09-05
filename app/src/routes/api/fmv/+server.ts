@@ -497,6 +497,7 @@ export async function POST({ request }: { request: Request }) {
         // }
 
         const result = await pricingDetails.grabData(buffer, true, username, password);
+        console.log('Final result:', result);
         return new Response(JSON.stringify(result), { status: 200 });
     } catch (error) {
         console.error('Error processing request:', error);
