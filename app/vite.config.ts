@@ -14,18 +14,27 @@ export default defineConfig({
 		}
 	},
 	build: {
-    rollupOptions: {
-      external: ["qs", "tough-cookie", "fetch-cookie", "cheerio", 'node-fetch','fetch-cookie/node-fetch'],
-	  output: {
-		globals: {
-			"qs": "Qs",
-			"tough-cookie": "tough-cookie",
-			"fetch-cookie": "fetch-cookie",
-			"cheerio": "cheerio",
-			'node-fetch': 'fetch',
-			'fetch-cookie/node-fetch': 'fetch-cookie/node-fetch'
+		rollupOptions: {
+			external: [
+				"qs", 
+				"tough-cookie", 
+				"fetch-cookie", 
+				"cheerio", 
+				'node-fetch',
+				'node:sqlite',  // Add this line
+				'sqlite3'       // Add this if you're using sqlite3 package
+			],
+			output: {
+				globals: {
+					"qs": "Qs",
+					"tough-cookie": "tough-cookie",
+					"fetch-cookie": "fetch-cookie",
+					"cheerio": "cheerio",
+					'node-fetch': 'fetch',
+					'node:sqlite': 'sqlite',
+					'sqlite3': 'sqlite3'
+				}
+			}
 		}
-	  }
-    }
-  }
+	}
 });
