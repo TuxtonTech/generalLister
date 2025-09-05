@@ -1,7 +1,7 @@
 import {CookieJar} from "tough-cookie";
 import fetch from "node-fetch";
 import fetchCookie from "fetch-cookie";
-import cheerio from "cheerio";
+import * as cheerio from "cheerio";
 
 async function refreshCovrPriceCookie(username: string, password: string) {
         // First request - get login page
