@@ -15,7 +15,7 @@ export default defineConfig({
 	},
 	build: {
     rollupOptions: {
-      external: ["qs", "tough-cookie", "fetch-cookie", "cheerio"],
+      external: ["qs", "tough-cookie", "fetch-cookie", "cheerio", 'fetch-cookie/node-fetch'],
     }
   }
 });
