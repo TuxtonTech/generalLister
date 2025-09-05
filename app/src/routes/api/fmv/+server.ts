@@ -484,14 +484,18 @@ class ComicPricingDetails {
 export async function POST({ request }: { request: Request }) {
     try {
         const data = await request.json();
-        const { imageBuffer, username, password, ?jar } = data;
+        const { imageBuffer, username, password } = data;
         const buffer = Buffer.from(imageBuffer, 'base64');
         
         const pricingDetails = new ComicPricingDetails();
-        if(jar) {
-            pricingDetails.jar = CookieJar.fromJSON(jar);
-        pricingDetails.fetchWithCookies = fetchCookie(fetch, pricingDetails.jar);
-    }
+        
+        
+        //If you want to use an existing jar, will decrease amount of time required to run.
+        // if(jar) {
+        //     pricingDetails.jar = CookieJar.fromJSON(jar);
+        //     pricingDetails.fetchWithCookies = fetchCookie(fetch, pricingDetails.jar);
+        // }
+
         const result = await pricingDetails.grabData(buffer, true, username, password);
         return new Response(JSON.stringify(result), { status: 200 });
     } catch (error) {
