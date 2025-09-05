@@ -95,14 +95,17 @@
         canvasElement.toBlob((blob) => {
             if (blob) {
                 const imageUrl = URL.createObjectURL(blob);
+                let foundNull = false;
                     imageUrls.update((urls)=> {
-                       const index = urls.findIndex(v => v == null)
-                        urls[index] = imageUrl
+                       const index = urls.findIndex(v => v === null)
+                          if(index != -1) foundNull = true;
+                       urls[index] = imageUrl
                         return urls
-                   })
-                    
-                    selectedPage.set('detailsModal');
-                    capturedImages = [...capturedImages, imageUrl];
+                    })
+                    if(!foundNull) {
+                        selectedPage.set('detailsModal');
+                        capturedImages = [...capturedImages, imageUrl];
+                    }
                    
             }
             isCapturing = false;
