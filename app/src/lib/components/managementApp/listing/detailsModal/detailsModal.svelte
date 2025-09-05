@@ -98,17 +98,21 @@
                     const base64Buffer = await blobUrlToBase64($imageUrls[0] + "");
                     console.log('Base64 length:', base64Buffer?.length);
                     
-                    const accounts: any = $accountsStore.find(account => {
+                    const account: any = $accountsStore.find(account => {
                         if(account.type === 'covr') {
-                            return;
+                            return account;
                         }
                     });
-                    
-                    const account = [accounts[0]];
+                    if(!account) {
+                        alert('Please add a Covr account in the Accounts Section to enable FMV lookup.');
+                        isLoadingFMV = false;
+                        selectedPage.set('accounts');
+                        return;
+                    }
                     const result = await fetch('/api/fmv', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ imageBuffer: base64Buffer, username: account.username, password: account.password,})
+                        body: JSON.stringify({ imageBuffer: base64Buffer, username: account.username, password: account.password})
                     });
 
                     if (result.ok) {
