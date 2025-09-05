@@ -191,7 +191,7 @@ class ComicPricingDetails {
                     ...bestMatch, 
                     fmv: fmv,
                     similarityScore: bestResult.score,
-                    comparisonStats: {
+                    comparisonStats: { 
                         totalFound: imageUrls.length,
                         successfulDownloads: imageBuffers.length,
                         bestMatchIndex: originalImageIndex
@@ -420,65 +420,88 @@ class ComicPricingDetails {
     }
 
     async fetchIssueSales(issueId: string, tab = "graded", pageRef = 1) {
-        const url = `https://covrprice.com/issue-sales/?issue_id=${issueId}&tab=${tab}&page_ref=${pageRef}`;
+    const url = `https://covrprice.com/issue-sales/?issue_id=${issueId}&tab=${tab}&page_ref=${pageRef}`;
 
-        const res = await this.fetchWithCookies(url, {
-            "headers": {
-                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                "accept-language": "en-US,en;q=0.9",
-                "cache-control": "max-age=0",
-                "priority": "u=0, i",
-                "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Google Chrome\";v=\"139\", \"Chromium\";v=\"139\"",
-                "sec-ch-ua-mobile": "?0",
-                "sec-ch-ua-platform": "\"Windows\"",
-                "sec-fetch-dest": "document",
-                "sec-fetch-mode": "navigate",
-                "sec-fetch-site": "same-origin",
-                "sec-fetch-user": "?1",
-                "upgrade-insecure-requests": "1"
-            },
-            "method": "GET"
-        });
+    const res = await this.fetchWithCookies(url, {
+        "headers": {
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "accept-language": "en-US,en;q=0.9",
+            "cache-control": "max-age=0",
+            "priority": "u=0, i",
+            "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Google Chrome\";v=\"139\", \"Chromium\";v=\"139\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "document",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-user": "?1",
+            "upgrade-insecure-requests": "1"
+        },
+        "method": "GET"
+    });
 
-        if (!res.ok) {
-            throw new Error(`Failed to fetch page: ${res.status} ${res.statusText}`);
-        }
+    if (!res.ok) {
+        throw new Error(`Failed to fetch page: ${res.status} ${res.statusText}`);
+    }
 
-        const html = await res.text();
-        const $ = cheerio.load(html);
-        const results: { [key: string]: any } = {};
+    const html = await res.text();
+    const $ = cheerio.load(html);
+    const results: { [key: string]: any } = {};
 
-        function parseScriptData(scriptContent: string | undefined) {
-            if (!scriptContent) return null;
+    function parseChartData(scriptContent: string | undefined) {
+        if (!scriptContent) return null;
 
+        try {
+            // Extract labels array
             const labelsMatch = scriptContent.match(/labels:\s*\[(.*?)\]/s);
+            // Extract data array
             const dataMatch = scriptContent.match(/data:\s*\[(.*?)\]/s);
 
             if (!labelsMatch || !dataMatch) return null;
 
-            const labels = JSON.parse("[" + labelsMatch[1] + "]");
-            const data = JSON.parse("[" + dataMatch[1] + "]").map(Number);
+            // Parse the arrays - handle quoted strings in labels
+            const labelsStr = labelsMatch[1];
+            const dataStr = dataMatch[1];
 
+            // Parse labels (they're quoted strings)
+            const labels = JSON.parse("[" + labelsStr + "]");
+            // Parse data (they're quoted numbers, so convert to numbers)
+            const data = JSON.parse("[" + dataStr + "]").map((val: string) => parseFloat(val));
+
+            // Create grade -> price mapping
             const fmvData: { [key: string]: number } = {};
             labels.forEach((label: string, idx: number) => {
-                fmvData[label.split(" ").join("_")] = data[idx];
+                // Keep grade as is (e.g., "9.2", "10", "3.5")
+                fmvData[label] = data[idx];
             });
 
             return fmvData;
+        } catch (error) {
+            console.error('Error parsing chart data:', error);
+            return null;
         }
-
-        // Parse chart data
-        const rawScript = $(".raw-sales-chart script").html();
-        const gradedScript = $(".graded-sales-chart script").html();
-
-        const rawData = parseScriptData(rawScript || undefined);
-        const gradedData = parseScriptData(gradedScript || undefined);
-
-        if (rawData) results.raw = rawData;
-        if (gradedData) results.graded = gradedData;
-
-        return results;
     }
+
+    // Find and parse raw sales chart
+    const rawChartScript = $('.raw-sales-chart script').html();
+    if (rawChartScript) {
+        const rawData = parseChartData(rawChartScript);
+        if (rawData) {
+            results.raw = rawData;
+        }
+    }
+
+    // Find and parse graded sales chart
+    const gradedChartScript = $('.graded-sales-chart script').html();
+    if (gradedChartScript) {
+        const gradedData = parseChartData(gradedChartScript);
+        if (gradedData) {
+            results.graded = gradedData;
+        }
+    }
+
+    return results;
+}
 }
 
 export async function POST({ request }: { request: Request }) {
