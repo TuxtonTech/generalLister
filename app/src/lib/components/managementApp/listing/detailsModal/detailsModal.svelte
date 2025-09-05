@@ -88,33 +88,44 @@
     }
 
     $: {
-        if($imageUrls.length == 0) selectedPage.set("listing")
-        if ($imageUrls.length === 1 && lastItem !== $imageUrls[0] && $imageUrls[0]) {
+        // Handle empty image URLs - navigate to listing
+        if ($imageUrls.length === 0) {
+            selectedPage.set("listing");
+        }
+        
+        // Handle FMV API call for the first image
+        else if ($imageUrls.length >= 1 && $imageUrls[0] && lastItem !== $imageUrls[0]) {
             (async () => { 
                 try {
+                    // Update lastItem immediately to prevent duplicate calls
+                    lastItem = $imageUrls[0];
                     isLoadingFMV = true;
                     fmvData = null;
                     
+                    // Convert blob URL to base64
                     const base64Buffer = await blobUrlToBase64($imageUrls[0] + "");
                     console.log('Base64 length:', base64Buffer?.length);
                     
-                    const account: any = $accountsStore.find(account => {
-                        if(account.type === 'covr') {
-                            return account;
-                        }
-                    });
-                    if(!account) {
+                    // Find COVR account
+                    const account = $accountsStore.find(account => account.type === 'covr');
+                    
+                    if (!account) {
                         alert('Please add a Covr account in the Accounts Section to enable FMV lookup.');
-                        isLoadingFMV = false;
                         selectedPage.set('accounts');
                         return;
                     }
+                    
+                    // Make FMV API call
                     const result = await fetch('/api/fmv', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ imageBuffer: base64Buffer, username: account.username, password: account.password})
+                        body: JSON.stringify({ 
+                            imageBuffer: base64Buffer, 
+                            username: account.username, 
+                            password: account.password
+                        })
                     });
-
+                
                     if (result.ok) {
                         const data = await result.json();
                         console.log('FMV API Response:', data);
@@ -126,19 +137,20 @@
                         
                     } else {
                         console.error('FMV API error:', result.status, result.statusText);
+                        // Optionally show user-friendly error message
+                        // alert(`Failed to get FMV data: ${result.statusText}`);
                     }
+                    
                 } catch (error) {
                     console.error('Error calling FMV API:', error);
+                    // Optionally show user-friendly error message
+                    // alert('Failed to process image for FMV lookup');
                 } finally {
                     isLoadingFMV = false;
                 }
-
-                if(!$imageUrls[0]) return
-                lastItem = $imageUrls[0];
             })();
         }
     }
-
     function addAspect(event: KeyboardEvent) {
         if (event.key === 'Enter' && aspectInput.trim() !== '') {
             event.preventDefault();

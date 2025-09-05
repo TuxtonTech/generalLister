@@ -19,15 +19,20 @@
     }
 
 	function addImage() {
-		imageUrls.update((urls) => {
-			const newUrls =  currentImageIndex > urls.length ? [...urls, null] : [...urls.slice(0, currentImageIndex), null, ...urls.slice(currentImageIndex++)]
-			console.log(newUrls, currentImageIndex)
-			return newUrls
-
-		})
-
-		selectedPage.set('cameraModal')
-	}
+        imageUrls.update((urls) => {
+            // Insert null after the current image index
+            const insertIndex = currentImageIndex + 1;
+            const newUrls = [
+                ...urls.slice(0, insertIndex),
+                null,
+                ...urls.slice(insertIndex)
+            ];
+            console.log(newUrls, currentImageIndex);
+            return newUrls;
+        });
+    
+        selectedPage.set('cameraModal');
+    }
 
     function deleteImage() {
         imageUrls.update((urls) => {
