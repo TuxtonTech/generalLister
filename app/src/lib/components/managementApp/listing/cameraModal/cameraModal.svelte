@@ -26,6 +26,7 @@
 
     }
 
+
     onMount(async () => {
         console.log("Cam Inited")
         await initializeCamera();
@@ -36,6 +37,15 @@
             stream.getTracks().forEach(track => track.stop());
         }
     });
+
+    function shouldNavigateToDetails() {
+    let shouldNavigate = false;
+    imageUrls.subscribe((urls) => {
+        // Navigate if there are no null values and at least one image
+        shouldNavigate = urls.length > 0 && !urls.some(url => url === null);
+    })();
+    return shouldNavigate;
+}
 
     async function initializeCamera() {
         try {
@@ -79,39 +89,53 @@
     }
 
     function capturePhoto() {
-        if (!videoElement || !canvasElement || isCapturing) return;
-        
-        isCapturing = true;
-        
-        // Set canvas dimensions to match video
-        const context = canvasElement.getContext('2d');
-        canvasElement.width = videoElement.videoWidth;
-        canvasElement.height = videoElement.videoHeight;
-        
-        // Draw the video frame to canvas
-        context?.drawImage(videoElement, 0, 0);
-        
-        // Convert to blob and create URL
-        canvasElement.toBlob((blob) => {
-            if (blob) {
-                const imageUrl = URL.createObjectURL(blob);
-                let foundNull = false;
-                    imageUrls.update((urls)=> {
-                       const index = urls.findIndex(v => v === null)
-                          if(index != -1) foundNull = true;
-                       urls[index] = imageUrl
-                        return urls
-                    })
-                    if(!foundNull) {
-                        selectedPage.set('detailsModal');
-                        capturedImages = [...capturedImages, imageUrl];
-                    }
-                   
+    if (!videoElement || !canvasElement || isCapturing) return;
+    
+    isCapturing = true;
+    
+    // Set canvas dimensions to match video
+    const context = canvasElement.getContext('2d');
+    canvasElement.width = videoElement.videoWidth;
+    canvasElement.height = videoElement.videoHeight;
+    
+    // Draw the video frame to canvas
+    context?.drawImage(videoElement, 0, 0);
+    
+    // Convert to blob and create URL
+    canvasElement.toBlob((blob) => {
+        if (blob) {
+            const imageUrl = URL.createObjectURL(blob);
+            let replacedNull = false;
+            
+            imageUrls.update((urls) => {
+                const nullIndex = urls.findIndex(v => v === null);
+                if (nullIndex !== -1) {
+                    // Found a null slot to replace
+                    replacedNull = true;
+                    urls[nullIndex] = imageUrl;
+                } else {
+                    // No null slots, add as new image
+                    urls.push(imageUrl);
+                }
+                return urls;
+            });
+            
+            capturedImages = [...capturedImages, imageUrl];
+            
+            if (shouldNavigateToDetails()) {
+                selectedPage.set('detailsModal');
             }
-            isCapturing = false;
-        }, 'image/jpeg', 0.9);
+            imageUrls.subscribe((urls) => {
+                const hasNullSlots = urls.some(url => url === null);
+                if (!hasNullSlots && urls.length > 0) {
+                    selectedPage.set('detailsModal');
+                }
+            })();
+        
+        }
+        isCapturing = false;
+    }, 'image/jpeg', 0.9);
     }
-
     function deleteImage(index: number) {
         // Revoke the URL to free memory
         URL.revokeObjectURL(capturedImages[index]);
