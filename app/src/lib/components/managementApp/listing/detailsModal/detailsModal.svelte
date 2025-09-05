@@ -1,5 +1,6 @@
 <!-- detailsModal.svelte -->
 <script lang="ts">
+	import { accountsStore } from "$lib/store/app/accounts/accounts";
 	import { imageUrls } from "$lib/store/app/helpers/detailsPage";
 	import { selectedPage } from "$lib/store/app/helpers/selectedPage";
     import CarouselModal from "./carouselModal/carouselModal.svelte";
@@ -97,10 +98,17 @@
                     const base64Buffer = await blobUrlToBase64($imageUrls[0] + "");
                     console.log('Base64 length:', base64Buffer?.length);
                     
+                    const accounts: any = $accountsStore.find(account => {
+                        if(account.type === 'covr') {
+                            return;
+                        }
+                    });
+                    
+                    const account = [accounts[0]];
                     const result = await fetch('/api/fmv', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ imageBuffer: base64Buffer })
+                        body: JSON.stringify({ imageBuffer: base64Buffer, username: account.username, password: account.password,})
                     });
 
                     if (result.ok) {
