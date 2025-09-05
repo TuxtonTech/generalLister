@@ -65,6 +65,21 @@
         if (data.publisher) autoDescription += `Publisher: ${data.publisher}\n`;
         if (data.title) autoDescription += `Series: ${data.title}\n`;
         if (data.variant_name) autoDescription += `Variant: ${data.variant_name}\n`;
+       if (data.fmv) {
+    if (data.fmv.raw && Object.keys(data.fmv.raw).length > 0) {
+        const rawPrices = Object.entries(data.fmv.raw)
+            .map(([condition, price]) => `${condition}: ${price}`)
+            .join(', ');
+        autoDescription += `Raw FMV: ${rawPrices}\n`;
+    }
+    
+    if (data.fmv.graded && Object.keys(data.fmv.graded).length > 0) {
+        const gradedPrices = Object.entries(data.fmv.graded)
+            .map(([grade, price]) => `${grade}: ${price}`)
+            .join(', ');
+        autoDescription += `Graded FMV: ${gradedPrices}\n`;
+    }
+}
         if (data.similarityScore) {
             autoDescription += `Match Confidence: ${(data.similarityScore * 100).toFixed(1)}%\n`;
         }
@@ -92,7 +107,7 @@
         if ($imageUrls.length === 0) {
             selectedPage.set("listing");
         }
-        
+
         // Handle FMV API call for the first image
         else if ($imageUrls.length >= 1 && $imageUrls[0] && lastItem !== $imageUrls[0]) {
             (async () => { 
@@ -101,20 +116,20 @@
                     lastItem = $imageUrls[0];
                     isLoadingFMV = true;
                     fmvData = null;
-                    
+
                     // Convert blob URL to base64
                     const base64Buffer = await blobUrlToBase64($imageUrls[0] + "");
                     console.log('Base64 length:', base64Buffer?.length);
-                    
+
                     // Find COVR account
                     const account = $accountsStore.find(account => account.type === 'covr');
-                    
+
                     if (!account) {
                         alert('Please add a Covr account in the Accounts Section to enable FMV lookup.');
                         selectedPage.set('accounts');
                         return;
                     }
-                    
+
                     // Make FMV API call
                     const result = await fetch('/api/fmv', {
                         method: 'POST',
@@ -125,22 +140,22 @@
                             password: account.password
                         })
                     });
-                
+
                     if (result.ok) {
                         const data = await result.json();
                         console.log('FMV API Response:', data);
-                        
+
                         fmvData = data;
-                        
+
                         // Auto-fill the form with the returned data
                         fillFormFromFMVData(data);
-                        
+
                     } else {
                         console.error('FMV API error:', result.status, result.statusText);
                         // Optionally show user-friendly error message
                         // alert(`Failed to get FMV data: ${result.statusText}`);
                     }
-                    
+
                 } catch (error) {
                     console.error('Error calling FMV API:', error);
                     // Optionally show user-friendly error message
