@@ -4,51 +4,51 @@ import { browser } from '$app/environment';
 
 // Initial accounts data
 const initialAccounts = [
-  {
-    id: '1',
-    name: 'Main COVR Account',
-    type: 'covr',
-    username: 'john.doe@email.com',
-    password: 'encrypted_password_here', // In real app, this should be encrypted
-    createdAt: '2024-01-15',
-    status: 'active'
-  },
-  {
-    id: '2',
-    name: 'eBay Store',
-    type: 'ebay',
-    oauthConnected: true,
-    oauthToken: 'oauth_token_here', // Store OAuth token
-    createdAt: '2024-01-20',
-    status: 'connected'
-  },
-  {
-    id: '3',
-    name: 'eBay Store',
-    type: 'ebay',
-    oauthConnected: true,
-    oauthToken: 'oauth_token_here', // Store OAuth token
-    createdAt: '2024-01-20',
-    status: 'connected'
-  },
-  {
-    id: '4',
-    name: 'eBay Store',
-    type: 'ebay',
-    oauthConnected: true,
-    oauthToken: 'oauth_token_here', // Store OAuth token
-    createdAt: '2024-01-20',
-    status: 'connected'
-  },
-  {
-    id: '5',
-    name: 'eBay Store',
-    type: 'ebay',
-    oauthConnected: true,
-    oauthToken: 'oauth_token_here', // Store OAuth token
-    createdAt: '2024-01-20',
-    status: 'connected'
-  }
+  // {
+  //   id: '1',
+  //   name: 'Main COVR Account',
+  //   type: 'covr',
+  //   username: 'john.doe@email.com',
+  //   password: 'encrypted_password_here', // In real app, this should be encrypted
+  //   createdAt: '2024-01-15',
+  //   status: 'active'
+  // },
+  // {
+  //   id: '2',
+  //   name: 'eBay Store',
+  //   type: 'ebay',
+  //   oauthConnected: true,
+  //   oauthToken: 'oauth_token_here', // Store OAuth token
+  //   createdAt: '2024-01-20',
+  //   status: 'connected'
+  // },
+  // {
+  //   id: '3',
+  //   name: 'eBay Store',
+  //   type: 'ebay',
+  //   oauthConnected: true,
+  //   oauthToken: 'oauth_token_here', // Store OAuth token
+  //   createdAt: '2024-01-20',
+  //   status: 'connected'
+  // },
+  // {
+  //   id: '4',
+  //   name: 'eBay Store',
+  //   type: 'ebay',
+  //   oauthConnected: true,
+  //   oauthToken: 'oauth_token_here', // Store OAuth token
+  //   createdAt: '2024-01-20',
+  //   status: 'connected'
+  // },
+  // {
+  //   id: '5',
+  //   name: 'eBay Store',
+  //   type: 'ebay',
+  //   oauthConnected: true,
+  //   oauthToken: 'oauth_token_here', // Store OAuth token
+  //   createdAt: '2024-01-20',
+  //   status: 'connected'
+  // }
 ];
 
 // Storage key for localStorage
