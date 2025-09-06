@@ -467,7 +467,7 @@ class ComicPricingDetails {
 
         const validationData = await validationResponse.json();
         console.log('Validation response:', validationData);
-        console.log(jar.getCookieStringSync('https://covrprice.com'));
+        // console.log(jar.getCookieStringSync('https://covrprice.com'));
         // Step 3: Submit the actual login form
         const loginBody = new URLSearchParams({
             '_acf_screen': formData._acf_screen || 'acfe_form',
@@ -507,7 +507,7 @@ class ComicPricingDetails {
         });
 
         console.log('Login response status:', loginResponse.status);
-        console.log(jar.getCookieStringSync('https://covrprice.com'));
+        // console.log(jar.getCookieStringSync('https://covrprice.com'));
         // Check if login was successful (usually redirects on success)
         if (loginResponse.status === 302 || loginResponse.status === 301) {
             console.log('Login successful - redirected');
