@@ -6,13 +6,13 @@ import fs from 'fs';
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit(), devtoolsJson()],
-	server: {
-		port: 443,
-		https: {
-			key: fs.readFileSync('/etc/letsencrypt/live/tuxtontech.com/privkey.pem', 'utf8'),
-			cert: fs.readFileSync('/etc/letsencrypt/live/tuxtontech.com/fullchain.pem', 'utf8')
-		}
-	},
+	// server: {
+	// 	port: 443,
+	// 	https: {
+	// 		// key: fs.readFileSync('/etc/letsencrypt/live/tuxtontech.com/privkey.pem', 'utf8'),
+	// 		// cert: fs.readFileSync('/etc/letsencrypt/live/tuxtontech.com/fullchain.pem', 'utf8')
+	// 	}
+	// },
 	build: {
 		rollupOptions: {
 			external: [
