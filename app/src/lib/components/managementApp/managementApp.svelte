@@ -8,12 +8,18 @@
   import CameraModal from "./listing/cameraModal/cameraModal.svelte";
 	import Accounts from "./accounts/accounts.svelte";
 	import AddAccountForm from "./accounts/addAccountForm/addAccountForm.svelte";
+	import { imageUrls } from "$lib/store/app/helpers/detailsPage";
 
   let pages = { 'listing': Listing, 'listings': Listings, 'settings': Settings, 'detailsModal': DetailsModal, 'cameraModal': CameraModal, 'accounts': Accounts, 'addAccount': AddAccountForm };
   let page: any;
 
   $: {
     page = pages[$selectedPage as PageType];
+  };
+
+  onunload = () => {
+    imageUrls.set([]);
+    isNavbarVisible.set(false);
   };
 
   // Reactive state for swipe functionality

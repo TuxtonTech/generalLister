@@ -7,6 +7,7 @@
     // A function to handle navigation and dispatch an event
     function navigateAndClose(pageName: string) {
         // 1. Navigate to the selected page
+        
         selectedPage.set(pageName);
         isNavbarVisible.set(false);
         // 2. Dispatch a custom event to tell the parent to close the navbar
