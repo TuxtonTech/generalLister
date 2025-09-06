@@ -54,7 +54,7 @@ class ComicPricingDetails {
             const topResult = await this.searchPriceCharting(imageBuffer, true);
             const title = topResult.name;
             console.log(`Search title: ${title}`);
-            this.refreshCovrPriceCookie(username, password);
+            await this.refreshCovrPriceCookie(username, password);
             // Get fresh nonce
             this.nonce = await this.grabCovrPriceNonce(); 
             const searchResults = await this.requestCovrSearch(title);
