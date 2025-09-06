@@ -512,7 +512,7 @@ async refreshCovrPriceCookie(username: string, password: string) {
             return {
                 success: true,
                 message: 'Login successful',
-                cookieJar: fetchWithCookies.cookieJar // Return the cookie jar if your fetch function stores it
+                cookieJar: this.fetchWithCookies.cookieJar // Return the cookie jar if your fetch function stores it
             };
         } else if (loginResponse.ok) {
             const loginHtml = await loginResponse.text();
@@ -528,7 +528,7 @@ async refreshCovrPriceCookie(username: string, password: string) {
                 return {
                     success: true,
                     message: 'Login successful',
-                    cookieJar: fetchWithCookies.cookieJar
+                    cookieJar: this.fetchWithCookies.cookieJar
                 };
             }
         } else {
