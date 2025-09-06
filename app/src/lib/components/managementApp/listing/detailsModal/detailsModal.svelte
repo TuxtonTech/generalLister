@@ -3,6 +3,7 @@
 	import { accountsStore } from "$lib/store/app/accounts/accounts";
 	import { imageUrls } from "$lib/store/app/helpers/detailsPage";
 	import { selectedPage } from "$lib/store/app/helpers/selectedPage";
+	import { onDestroy } from "svelte";
     import CarouselModal from "./carouselModal/carouselModal.svelte";
     
     // Form fields
@@ -102,6 +103,21 @@
         });
     }
 
+
+    onDestroy(() => {
+        // Reset form state when modal is closed
+        title = '';
+        price = null;
+        quantity = null;
+        description = '';
+        aspectInput = '';
+        listingAspects = [];
+        isLoadingFMV = false;
+        fmvData = null;
+        lastItem = '';
+        imageUrls.set([]);
+    })
+    
     $: {
         // Handle empty image URLs - navigate to listing
         if ($imageUrls.length === 0) {

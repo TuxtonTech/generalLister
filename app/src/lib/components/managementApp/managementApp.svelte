@@ -17,10 +17,7 @@
     page = pages[$selectedPage as PageType];
   };
 
-  onunload = () => {
-    imageUrls.set([]);
-    isNavbarVisible.set(false);
-  };
+  
 
   // Reactive state for swipe functionality
   let startX = 0;
