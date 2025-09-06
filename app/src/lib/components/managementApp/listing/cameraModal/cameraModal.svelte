@@ -327,7 +327,6 @@
     <!-- Hidden canvas for image capture -->
     <canvas bind:this={canvasElement} style="display: none;"></canvas>
 </div>
-
 <style>
     .camera-modal {
         /* position: fixed; */
