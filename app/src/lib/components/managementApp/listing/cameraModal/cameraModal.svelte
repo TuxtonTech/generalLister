@@ -2,7 +2,7 @@
     import { onMount, onDestroy } from 'svelte';
     import { imageUrls } from "$lib/store/app/helpers/detailsPage";
     import { selectedPage } from "$lib/store/app/helpers/selectedPage";
-
+    
     let videoElement: HTMLVideoElement;
     let canvasElement: HTMLCanvasElement;
     let stream: MediaStream | null = null;
@@ -16,17 +16,7 @@
     let countdownInterval: number | null = null;
 
     // Reactive statement to handle API call when images are captured
-    $: {
-        if ($imageUrls.length === 1) {
-            fetch('/api/fmv', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBuffer: $imageUrls[0] })
-            }).catch(error => {
-                console.error('API call failed:', error);
-            });
-        }
-    }
+    
 
     onMount(async () => {
         await initializeCamera();
@@ -45,18 +35,14 @@
             clearInterval(countdownInterval);
             countdownInterval = null;
         }
-        // Clean up any existing blob URLs
-        capturedImages.forEach(url => {
-            if (url.startsWith('blob:')) {
-                URL.revokeObjectURL(url);
-            }
-        });
+        
     }
 
     function shouldNavigateToDetails(): boolean {
         let shouldNavigate = false;
         const unsubscribe = imageUrls.subscribe((urls) => {
-            shouldNavigate = urls.length > 0 && !urls.some(url => url === null);
+            console.log(urls)
+            shouldNavigate = urls.length > 5 && !urls.some(url => url === null);
         });
         unsubscribe(); // Immediately unsubscribe to avoid memory leaks
         return shouldNavigate;
@@ -207,7 +193,9 @@
 
     function proceedToDetails() {
         if (capturedImages.length > 0) {
-            imageUrls.set([...capturedImages]);
+            imageUrls.update((urls) => {
+                return [... (urls.length > capturedImages.length ? urls : capturedImages)]
+            })
             selectedPage.set('detailsModal');
         }
     }
@@ -326,7 +314,7 @@
                         <button 
                             class="capture-btn" 
                             class:capturing={isCapturing}
-                            on:click={startCountdown}
+                            on:click={capturePhoto}
                             disabled={isCapturing || showCountdown}
                             aria-label="Take photo"
                         >

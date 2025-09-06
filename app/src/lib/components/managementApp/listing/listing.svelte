@@ -1,7 +1,26 @@
 <script lang="ts">
     import { imageUrls } from "$lib/store/app/helpers/detailsPage";
     import { selectedPage } from "$lib/store/app/helpers/selectedPage";
+	import { onMount } from "svelte";
 
+    onMount(async () => {
+        // Clean up any existing blob URLs
+        const unsubscribe = imageUrls.subscribe(urls => {
+            urls.forEach(url => {
+                if (url && url.startsWith('blob:')) {
+                    URL.revokeObjectURL(url);
+                }
+            });
+        })
+        
+        unsubscribe()
+        imageUrls.set([])
+    })
+
+
+
+
+    // Swipe Handlers
     let dragActive = false;
 
     function handleFileChange(event: Event) {

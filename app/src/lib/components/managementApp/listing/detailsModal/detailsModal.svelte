@@ -3,7 +3,7 @@
 	import { accountsStore } from "$lib/store/app/accounts/accounts";
 	import { imageUrls } from "$lib/store/app/helpers/detailsPage";
 	import { selectedPage } from "$lib/store/app/helpers/selectedPage";
-	import { onDestroy } from "svelte";
+	import { onDestroy, onMount } from "svelte";
     import CarouselModal from "./carouselModal/carouselModal.svelte";
     
     // Form fields
@@ -21,6 +21,10 @@
     let isLoadingFMV: boolean = false;
     let fmvData: any = null;
 
+  
+
+    $: {
+    }
     async function blobUrlToBase64(blobUrl: string) {
         if (!blobUrl) return;
         const response = await fetch(blobUrl);
@@ -106,16 +110,16 @@
 
     onDestroy(() => {
         // Reset form state when modal is closed
-        title = '';
-        price = null;
-        quantity = null;
-        description = '';
-        aspectInput = '';
-        listingAspects = [];
-        isLoadingFMV = false;
-        fmvData = null;
-        lastItem = '';
-        imageUrls.set([]);
+        // title = '';
+        // price = null;
+        // quantity = null;
+        // description = '';
+        // aspectInput = '';
+        // listingAspects = [];
+        // isLoadingFMV = false;
+        // fmvData = null;
+        // lastItem = '';
+        // imageUrls.set([]);
     })
     
     $: {
