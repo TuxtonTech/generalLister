@@ -12,40 +12,55 @@
     let facingMode = 'environment'; // 'user' for front, 'environment' for back
     let isFlashOn = false;
     let showCountdown = false;
-    let countdown = 0;
+    let countdown = 3; // Start countdown from 3
+    let countdownInterval: number | null = null;
 
-
+    // Reactive statement to handle API call when images are captured
     $: {
-        if($imageUrls.length == 1) {
+        if ($imageUrls.length === 1) {
             fetch('/api/fmv', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBuffer: $imageUrls[0] }) // Replace null with actual image buffer if needed
-            })
+                body: JSON.stringify({ imageBuffer: $imageUrls[0] })
+            }).catch(error => {
+                console.error('API call failed:', error);
+            });
         }
-
     }
 
-
     onMount(async () => {
-        console.log("Cam Inited")
         await initializeCamera();
     });
 
     onDestroy(() => {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
+        cleanup();
     });
 
-    function shouldNavigateToDetails() {
-    let shouldNavigate = false;
-    imageUrls.subscribe((urls) => {
-        // Navigate if there are no null values and at least one image
-        shouldNavigate = urls.length > 0 && !urls.some(url => url === null);
-    })();
-    return shouldNavigate;
-}
+    function cleanup() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+        // Clean up any existing blob URLs
+        capturedImages.forEach(url => {
+            if (url.startsWith('blob:')) {
+                URL.revokeObjectURL(url);
+            }
+        });
+    }
+
+    function shouldNavigateToDetails(): boolean {
+        let shouldNavigate = false;
+        const unsubscribe = imageUrls.subscribe((urls) => {
+            shouldNavigate = urls.length > 0 && !urls.some(url => url === null);
+        });
+        unsubscribe(); // Immediately unsubscribe to avoid memory leaks
+        return shouldNavigate;
+    }
 
     async function initializeCamera() {
         try {
@@ -56,7 +71,7 @@
                 stream.getTracks().forEach(track => track.stop());
             }
 
-            const constraints = {
+            const constraints: MediaStreamConstraints = {
                 video: {
                     facingMode: facingMode,
                     width: { ideal: 1920 },
@@ -65,81 +80,105 @@
             };
 
             stream = await navigator.mediaDevices.getUserMedia(constraints);
-            videoElement.srcObject = stream;
-            
+            if (videoElement) {
+                videoElement.srcObject = stream;
+            }
         } catch (error) {
             console.error('Error accessing camera:', error);
-            cameraError = 'Unable to access camera. Please check permissions.';
+            if (error instanceof Error) {
+                if (error.name === 'NotAllowedError') {
+                    cameraError = 'Camera access denied. Please allow camera permissions and try again.';
+                } else if (error.name === 'NotFoundError') {
+                    cameraError = 'No camera found. Please connect a camera and try again.';
+                } else {
+                    cameraError = 'Unable to access camera. Please check permissions and try again.';
+                }
+            } else {
+                cameraError = 'Unable to access camera. Please check permissions and try again.';
+            }
         }
     }
 
     function startCountdown() {
-        capturePhoto();
-        
-        //Visual Count Down Interval ------------------
-        // showCountdown = true;
-        // countdown = 0;
-        // const countdownInterval = setInterval(() => {
-        //     countdown--;
-        //     if (countdown <= 0) {
-        //         clearInterval(countdownInterval);
-        //         showCountdown = false;
-        //     }
-        // }, 1000);
+        if (isCapturing || !videoElement || !stream) return;
+
+        isCapturing = true;
+        showCountdown = true;
+        countdown = 3;
+
+        countdownInterval = setInterval(() => {
+            countdown--;
+            if (countdown <= 0) {
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+                showCountdown = false;
+                capturePhoto();
+            }
+        }, 1000) as unknown as number;
     }
 
     function capturePhoto() {
-    if (!videoElement || !canvasElement || isCapturing) return;
-    
-    isCapturing = true;
-    
-    // Set canvas dimensions to match video
-    const context = canvasElement.getContext('2d');
-    canvasElement.width = videoElement.videoWidth;
-    canvasElement.height = videoElement.videoHeight;
-    
-    // Draw the video frame to canvas
-    context?.drawImage(videoElement, 0, 0);
-    
-    // Convert to blob and create URL
-    canvasElement.toBlob((blob) => {
-        if (blob) {
-            const imageUrl = URL.createObjectURL(blob);
-            let replacedNull = false;
-            
-            imageUrls.update((urls) => {
-                const nullIndex = urls.findIndex(v => v === null);
-                if (nullIndex !== -1) {
-                    // Found a null slot to replace
-                    replacedNull = true;
-                    urls[nullIndex] = imageUrl;
-                } else {
-                    // No null slots, add as new image
-                    urls.push(imageUrl);
-                }
-                return urls;
-            });
-            
-            capturedImages = [...capturedImages, imageUrl];
-            
-            if (shouldNavigateToDetails()) {
-                selectedPage.set('detailsModal');
-            }
-            imageUrls.subscribe((urls) => {
-                const hasNullSlots = urls.some(url => url === null);
-                if (!hasNullSlots && urls.length > 0) {
+        if (!videoElement || !canvasElement || !stream) {
+            isCapturing = false;
+            return;
+        }
+        
+        const context = canvasElement.getContext('2d');
+        if (!context) {
+            isCapturing = false;
+            return;
+        }
+
+        // Wait for video to be ready
+        if (videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+            isCapturing = false;
+            return;
+        }
+
+        canvasElement.width = videoElement.videoWidth;
+        canvasElement.height = videoElement.videoHeight;
+        
+        context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+        
+        canvasElement.toBlob((blob) => {
+            if (blob) {
+                const imageUrl = URL.createObjectURL(blob);
+                
+                imageUrls.update((urls) => {
+                    const nullIndex = urls.findIndex(v => v === null);
+                    if (nullIndex !== -1) {
+                        urls[nullIndex] = imageUrl;
+                    } else {
+                        urls.push(imageUrl);
+                    }
+                    return [...urls]; // Create new array to trigger reactivity
+                });
+                
+                capturedImages = [...capturedImages, imageUrl];
+                
+                if (shouldNavigateToDetails()) {
                     selectedPage.set('detailsModal');
                 }
-            })();
-        
-        }
-        isCapturing = false;
-    }, 'image/jpeg', 0.9);
+            }
+            isCapturing = false;
+        }, 'image/jpeg', 0.9);
     }
+    
     function deleteImage(index: number) {
-        // Revoke the URL to free memory
-        URL.revokeObjectURL(capturedImages[index]);
-        capturedImages = capturedImages.filter((_, i) => i !== index);
+        if (index >= 0 && index < capturedImages.length) {
+            const urlToRevoke = capturedImages[index];
+            if (urlToRevoke.startsWith('blob:')) {
+                URL.revokeObjectURL(urlToRevoke);
+            }
+            capturedImages = capturedImages.filter((_, i) => i !== index);
+            
+            // Also update the store
+            imageUrls.update(urls => {
+                return urls.filter(url => url !== urlToRevoke);
+            });
+        }
     }
 
     function switchCamera() {
@@ -147,40 +186,52 @@
         initializeCamera();
     }
 
-    function toggleFlash() {
-        if (stream) {
+    async function toggleFlash() {
+        if (!stream) return;
+
+        try {
             const track = stream.getVideoTracks()[0];
             const capabilities = track.getCapabilities();
             
-            // if (capabilities.torch) {
-            //     isFlashOn = !isFlashOn;
-            //     track.applyConstraints({
-            //         advanced: [{ "torch": isFlashOn }]
-            //     }).catch(() => {
-            //         // Flash not supported, ignore
-            //         isFlashOn = false;
-            //     });
-            // }
+            if ('torch' in capabilities && capabilities.torch) {
+                isFlashOn = !isFlashOn;
+                await track.applyConstraints({
+                    advanced: [{ torch: isFlashOn } as any]
+                });
+            }
+        } catch (error) {
+            console.error('Flash toggle failed:', error);
+            isFlashOn = false;
         }
     }
 
     function proceedToDetails() {
-        console.log(capturedImages.length)
         if (capturedImages.length > 0) {
-            imageUrls.set(capturedImages);
+            imageUrls.set([...capturedImages]);
             selectedPage.set('detailsModal');
         }
     }
 
     function goBack() {
-        // Clean up captured images
-        capturedImages.forEach(url => URL.revokeObjectURL(url));
-        selectedPage.set('listing'); // or whatever your main page is called
+        cleanup();
+        capturedImages.forEach(url => {
+            if (url.startsWith('blob:')) {
+                URL.revokeObjectURL(url);
+            }
+        });
+        capturedImages = [];
+        imageUrls.set([]);
+        selectedPage.set('listing');
     }
 
     function retakeAll() {
-        capturedImages.forEach(url => URL.revokeObjectURL(url));
+        capturedImages.forEach(url => {
+            if (url.startsWith('blob:')) {
+                URL.revokeObjectURL(url);
+            }
+        });
         capturedImages = [];
+        imageUrls.set([]);
     }
 </script>
 
@@ -232,7 +283,6 @@
             </div>
         {:else}
             <div class="camera-container">
-                <!-- Camera view -->
                 <div class="video-container">
                     <video 
                         bind:this={videoElement}
@@ -242,14 +292,12 @@
                         class="camera-video"
                     ></video>
                     
-                    <!-- Countdown overlay -->
                     {#if showCountdown}
                         <div class="countdown-overlay">
                             <div class="countdown-number">{countdown}</div>
                         </div>
                     {/if}
 
-                    <!-- Camera overlay UI -->
                     <div class="camera-overlay">
                         <div class="frame-guide"></div>
                         
@@ -261,7 +309,6 @@
                     </div>
                 </div>
 
-                <!-- Camera controls -->
                 <div class="camera-controls">
                     <div class="control-row">
                         {#if capturedImages.length > 0}
@@ -302,11 +349,10 @@
         {/if}
     </div>
 
-    <!-- Captured images strip -->
     {#if capturedImages.length > 0}
         <div class="images-strip">
             <div class="images-container">
-                {#each capturedImages as imageUrl, index}
+                {#each capturedImages as imageUrl, index (imageUrl)}
                     <div class="image-thumb">
                         <img src={imageUrl} alt="Captured photo {index + 1}" />
                         <button 
@@ -324,12 +370,12 @@
         </div>
     {/if}
 
-    <!-- Hidden canvas for image capture -->
     <canvas bind:this={canvasElement} style="display: none;"></canvas>
 </div>
+
 <style>
     .camera-modal {
-        /* position: fixed; */
+        position: fixed;
         top: 0;
         left: 0;
         right: 0;
@@ -340,7 +386,8 @@
         flex-direction: column;
         z-index: 1000;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        height: 100%;
+        height: 100vh;
+        overflow: hidden;
     }
 
     .camera-header {
@@ -351,6 +398,7 @@
         background: rgba(0, 0, 0, 0.8);
         backdrop-filter: blur(10px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        flex-shrink: 0;
     }
 
     .camera-header h2 {
@@ -389,6 +437,7 @@
         align-items: center;
         justify-content: center;
         position: relative;
+        min-height: 0; /* Allow flex child to shrink */
     }
 
     .error-state {
@@ -442,6 +491,7 @@
         align-items: center;
         justify-content: center;
         background: #000;
+        overflow: hidden;
     }
 
     .camera-video {
@@ -458,6 +508,7 @@
         justify-content: center;
         background: rgba(0, 0, 0, 0.5);
         backdrop-filter: blur(4px);
+        z-index: 10;
     }
 
     .countdown-number {
@@ -508,6 +559,7 @@
         padding: 1.5rem;
         background: rgba(0, 0, 0, 0.8);
         backdrop-filter: blur(10px);
+        flex-shrink: 0;
     }
 
     .control-row {
@@ -532,8 +584,13 @@
         position: relative;
     }
 
-    .capture-btn:hover {
+    .capture-btn:hover:not(:disabled) {
         transform: scale(1.1);
+    }
+
+    .capture-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 
     .capture-btn.capturing {
@@ -564,9 +621,6 @@
         align-items: center;
         gap: 0.5rem;
         font-size: 0.9rem;
-    }
-
-    .control-btn.secondary {
         background: transparent;
         color: white;
     }
@@ -578,7 +632,6 @@
 
     .control-btn.primary {
         background: #3b82f6;
-        color: white;
         border-color: #3b82f6;
     }
 
@@ -592,6 +645,7 @@
         border-top: 1px solid rgba(255, 255, 255, 0.1);
         padding: 1rem;
         backdrop-filter: blur(10px);
+        flex-shrink: 0;
     }
 
     .images-container {
@@ -689,10 +743,6 @@
             padding: 1rem;
         }
 
-        .control-btn span {
-            display: none;
-        }
-
         .frame-guide {
             width: 90%;
         }
@@ -748,4 +798,4 @@
             transform: none;
         }
     }
-    </style>
+</style>
