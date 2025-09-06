@@ -349,16 +349,18 @@
         {/if}
     </div>
 
+    <!-- Image Gallery Strip -->
     {#if capturedImages.length > 0}
         <div class="images-strip">
             <div class="images-container">
                 {#each capturedImages as imageUrl, index (imageUrl)}
                     <div class="image-thumb">
-                        <img src={imageUrl} alt="Captured photo {index + 1}" />
+                        <img src={imageUrl} alt="Captured photo {index + 1}" loading="lazy" />
                         <button 
                             class="delete-thumb" 
                             on:click={() => deleteImage(index)}
                             aria-label="Delete photo {index + 1}"
+                            type="button"
                         >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M18 6L6 18M6 6L18 18"/>
