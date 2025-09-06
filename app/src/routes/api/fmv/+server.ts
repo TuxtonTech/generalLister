@@ -344,7 +344,7 @@ class ComicPricingDetails {
         return body;
     }
 
-    async refreshCovrPriceCookie(username: string, password: string) {
+async refreshCovrPriceCookie(username: string, password: string) {
         // First request - get login page
         try {
         // Step 1: Get the login page to extract form data
@@ -518,7 +518,6 @@ class ComicPricingDetails {
             };
         } else if (loginResponse.ok) {
             const loginHtml = await loginResponse.text();
-            fs.writeFileSync('./a.html', loginHtml)
             // Check if we're still on login page (failed login) or somewhere else (success)
             if (loginHtml.includes('Username or Email Address') && loginHtml.includes('Password')) {
                 return {

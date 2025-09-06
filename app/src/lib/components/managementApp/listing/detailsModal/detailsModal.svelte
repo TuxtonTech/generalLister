@@ -151,9 +151,10 @@
                         fillFormFromFMVData(data);
 
                     } else {
-                        console.error('FMV API error:', result.status, result.statusText);
+
+                        // console.error('FMV API error:', result.status, result.statusText);
                         // Optionally show user-friendly error message
-                        // alert(`Failed to get FMV data: ${result.statusText}`);
+                        alert(`Failed to get FMV data: ${result.statusText}`);
                     }
 
                 } catch (error) {
