@@ -527,10 +527,10 @@
     .frame-guide {
         width: min(80%, 300px);
         aspect-ratio: 1;
-        border: 2px solid rgba(255, 255, 255, 0.5);
+        /* border: 2px solid rgba(255, 255, 255, 0.5); */
         border-radius: 12px;
         background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(2px);
+        /* backdrop-filter: blur(2px); */
     }
 
     .image-counter {
@@ -542,7 +542,7 @@
         border-radius: 20px;
         font-size: 0.9rem;
         font-weight: 500;
-        backdrop-filter: blur(10px);
+        /* backdrop-filter: blur(10px); */
     }
 
     .camera-controls {
