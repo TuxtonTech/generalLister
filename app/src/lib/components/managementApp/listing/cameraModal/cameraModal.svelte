@@ -376,7 +376,7 @@
         flex-direction: column;
         z-index: 1000;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        height: 100vh;
+        height: 100dvh;
         overflow: hidden;
     }
 
