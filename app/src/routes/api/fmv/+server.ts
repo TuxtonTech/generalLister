@@ -630,26 +630,43 @@ async refreshCovrPriceCookie(username: string, password: string) {
 }
 }
 
-export async function POST({ request }: { request: Request }) {
+import type { RequestHandler } from './$types';
+
+export const POST: RequestHandler = async ({ request }) => {
     try {
+        // Check content length
+        const contentLength = request.headers.get('content-length');
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        
+        if (contentLength && parseInt(contentLength) > maxSize) {
+            return new Response('Data too large', { status: 413 });
+        }
+        
         const data = await request.json();
         const { imageBuffer, username, password } = data;
+        
+        if (!imageBuffer || !username || !password) {
+            return new Response('Missing required fields', { status: 400 });
+        }
+        
+        // Convert base64 to buffer
         const buffer = Buffer.from(imageBuffer, 'base64');
         
         const pricingDetails = new ComicPricingDetails();
-        
-        
-        //If you want to use an existing jar, will decrease amount of time required to run.
-        // if(jar) {
-        //     pricingDetails.jar = CookieJar.fromJSON(jar);
-        //     pricingDetails.fetchWithCookies = fetchCookie(fetch, pricingDetails.jar);
-        // }
-
         const result = await pricingDetails.grabData(buffer, true, username, password);
-        console.log('Final result:', result);
-        return new Response(JSON.stringify(result), { status: 200 });
+        
+        console.log(`Image processed, buffer size: ${buffer.length} bytes`);
+        
+        return new Response(JSON.stringify({ 
+            success: true,
+            bufferSize: buffer.length,
+            result: result
+        }), {
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
     } catch (error) {
-        console.error('Error processing request:', error);
-        return new Response(JSON.stringify({ error: 'Internal Server Error' }), { status: 500 });
-    }   
-}
+        console.error('Image processing error:', error);
+        return new Response('Processing failed', { status: 500 });
+    }
+};
