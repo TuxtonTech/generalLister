@@ -91,7 +91,7 @@
                     multiple
                     accept="image/*"
                     on:change={handleFileChange}
-                    webkitdirectory 
+                     
                 />
             </label>
             <p class="file-info">Supports JPG, PNG, WebP • Max 10MB each</p>
