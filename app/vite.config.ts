@@ -38,9 +38,5 @@ export default defineConfig({
 			}
 		},
 		
-	},
-	server: {
-    // For dev server
-  	  bodySizeLimit: '50mb'
-  	}
+	}
 });
