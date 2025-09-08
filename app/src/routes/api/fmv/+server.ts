@@ -637,7 +637,6 @@ export async function POST ({ request }) {
     try {
         const contentLength = request.headers.get('content-length');
         const maxSize = 50 * 1024 * 1024;
-        
         if (contentLength && parseInt(contentLength) > maxSize) {
             return new Response('Data too large', { status: 413 });
         }

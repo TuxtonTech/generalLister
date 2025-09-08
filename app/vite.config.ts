@@ -36,6 +36,8 @@ export default defineConfig({
 					'sqlite3': 'sqlite3'
 				}
 			}
-		}
-	}
+		},
+		
+	},
+	
 });
