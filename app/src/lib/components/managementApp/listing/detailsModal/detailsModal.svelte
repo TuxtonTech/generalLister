@@ -149,7 +149,7 @@
 
                     // Convert blob URL to base64
                     const binaryBuffer = await blobUrlToBinary($imageUrls[0] + "");
-                    // console.log('Base64 length:', binaryBuffer);
+                    console.log('Base64 length:', binaryBuffer);
 
                     // Find COVR account
                     const account = $accountsStore.find(account => account.type === 'covr');
