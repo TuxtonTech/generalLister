@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'generalLister-app',
-    script: './build',
+    script: './start.js',
     instances: 1,
     exec_mode: 'cluster',
     env_file: '.env',
