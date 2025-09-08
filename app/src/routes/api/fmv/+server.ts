@@ -635,12 +635,7 @@ async refreshCovrPriceCookie(username: string, password: string) {
 // Updated endpoint to handle binary data
 export async function POST ({ request }) {
     try {
-        const contentLength = request.headers.get('content-length');
-        const maxSize = 50 * 1024 * 1024;
-        if (contentLength && parseInt(contentLength) > maxSize) {
-            return new Response('Data too large', { status: 413 });
-        }
-        
+      
         const formData = await request.formData();
         const imageFile = formData.get('image') as File;
         const username = formData.get('username') as string;
