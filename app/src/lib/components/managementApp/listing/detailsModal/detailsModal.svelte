@@ -160,17 +160,7 @@ async function formatData(blobUrl: string, username: string, password: string) {
                     lastItem = $imageUrls[0];
                     isLoadingFMV = true;
                     fmvData = null;
-                    async function formatData(blobUrl: string, username: string, password: string) {
-    const response = await fetch(blobUrl);
-    const blob = await response.blob();
-    
-    const formData = new FormData();
-    formData.append('image', blob);
-    formData.append('username', username);
-    formData.append('password', password);
-    
-    return formData
-}
+               
                     // Convert blob URL to base64
                     const account = $accountsStore.find(account => account.type === 'covr');
 
