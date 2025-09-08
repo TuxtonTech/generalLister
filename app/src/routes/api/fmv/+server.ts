@@ -656,7 +656,7 @@ export const POST: RequestHandler = async ({ request }) => {
         const result = await pricingDetails.grabData(buffer, true, username, password);
         
         console.log(`Image processed, buffer size: ${buffer.length} bytes`);
-        
+        console.log('CHange')
         return new Response(JSON.stringify({ 
             success: true,
             bufferSize: buffer.length,
