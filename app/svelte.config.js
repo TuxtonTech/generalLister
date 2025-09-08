@@ -8,7 +8,10 @@ const config = {
 	// preprocess: vitePreprocess(),
 	kit: { adapter: adapter({
 		bodySizeLimit: 50 * 1024 * 1024
-	}) }
+	}) },
+	bodySize: {
+      max: 52428800 // 50MB in bytes
+    }
 };
 
 export default config;
