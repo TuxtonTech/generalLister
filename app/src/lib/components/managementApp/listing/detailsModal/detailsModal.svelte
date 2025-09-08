@@ -25,6 +25,16 @@
 
     $: {
     }
+
+    async function blobUrlToBinary(blobUrl: string) {
+    if (!blobUrl) return;
+    const response = await fetch(blobUrl);
+    const blob = await response.blob();
+    
+    // This gives you binary data as ArrayBuffer
+    return await blob.arrayBuffer();
+}
+
     async function blobUrlToBase64(blobUrl: string) {
         if (!blobUrl) return;
         const response = await fetch(blobUrl);
@@ -138,8 +148,8 @@
                     fmvData = null;
 
                     // Convert blob URL to base64
-                    const base64Buffer = await blobUrlToBase64($imageUrls[0] + "");
-                    console.log('Base64 length:', base64Buffer?.length);
+                    const binaryBuffer = await blobUrlToBinary($imageUrls[0] + "");
+                    // console.log('Base64 length:', binaryBuffer);
 
                     // Find COVR account
                     const account = $accountsStore.find(account => account.type === 'covr');
@@ -155,7 +165,7 @@
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
-                            imageBuffer: base64Buffer, 
+                            imageBuffer: binaryBuffer, 
                             username: account.username, 
                             password: account.password
                         })
