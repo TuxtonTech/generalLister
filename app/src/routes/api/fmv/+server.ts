@@ -652,11 +652,7 @@ export async function POST ({ request }) {
         const pricingDetails = new ComicPricingDetails();
         const result = await pricingDetails.grabData(buffer, true, username, password);
         
-        return new Response(JSON.stringify({ 
-            success: true,
-            bufferSize: buffer.length,
-            result: result
-        }), {
+        return new Response(JSON.stringify(result), {
             headers: { 'Content-Type': 'application/json' }
         });
         
