@@ -5,6 +5,7 @@
 	import { selectedPage } from "$lib/store/app/helpers/selectedPage";
 	import { onDestroy, onMount } from "svelte";
     import CarouselModal from "./carouselModal/carouselModal.svelte";
+	import { form } from "$app/server";
     
     // Form fields
     let title: string = '';
@@ -24,6 +25,7 @@
   
 
     $: {
+
     }
 
     async function blobUrlToBinary(blobUrl: string) {
@@ -33,6 +35,18 @@
     
     // This gives you binary data as ArrayBuffer
     return await blob.arrayBuffer();
+}   
+
+async function formatData(blobUrl: string, username: string, password: string) {
+    const response = await fetch(blobUrl);
+    const blob = await response.blob();
+    
+    const formData = new FormData();
+    formData.append('image', blob);
+    formData.append('username', username);
+    formData.append('password', password);
+    
+    return form
 }
 
     async function blobUrlToBase64(blobUrl: string) {
@@ -148,11 +162,12 @@
                     fmvData = null;
 
                     // Convert blob URL to base64
-                    const binaryBuffer = await blobUrlToBinary($imageUrls[0] + "");
-                    console.log('Base64 length:', binaryBuffer);
+                    const account = $accountsStore.find(account => account.type === 'covr');
+
+                    const imageFormData = await formatData($imageUrls[0] + "", account.username, account.password);
+                    // console.log('Base64 length:', binaryBuffer);
 
                     // Find COVR account
-                    const account = $accountsStore.find(account => account.type === 'covr');
 
                     if (!account) {
                         alert('Please add a Covr account in the Accounts Section to enable FMV lookup.');
@@ -163,14 +178,10 @@
                     // Make FMV API call
                     const result = await fetch('/api/fmv', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            imageBuffer: binaryBuffer, 
-                            username: account.username, 
-                            password: account.password
-                        })
+                        headers: { "Content-Type": "application/x-www-form-urlencoded", },
+                        body: imageFormData
                     });
-
+e
                     if (result.ok) {
                         const data = await result.json();
                         console.log('FMV API Response:', data);

@@ -632,32 +632,32 @@ async refreshCovrPriceCookie(username: string, password: string) {
 
 import type { RequestHandler } from './$types';
 
+// Updated endpoint to handle binary data
 export const POST: RequestHandler = async ({ request }) => {
     try {
-        // Check content length
         const contentLength = request.headers.get('content-length');
-        const maxSize = 50 * 1024 * 1024; // 10MB
+        const maxSize = 50 * 1024 * 1024;
         
         if (contentLength && parseInt(contentLength) > maxSize) {
-            console.log('oops')
             return new Response('Data too large', { status: 413 });
         }
         
-        const data = await request.json();
-        const { imageBuffer, username, password } = data;
+        const formData = await request.formData();
+        const imageFile = formData.get('image') as File;
+        const username = formData.get('username') as string;
+        const password = formData.get('password') as string;
         
-        if (!imageBuffer || !username || !password) {
+        if (!imageFile || !username || !password) {
             return new Response('Missing required fields', { status: 400 });
         }
         
-        // Convert base64 to buffer
-        const buffer = Buffer.from(imageBuffer, 'base64');
+        // Convert File to Buffer directly (no base64 needed!)
+        const arrayBuffer = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
         
         const pricingDetails = new ComicPricingDetails();
         const result = await pricingDetails.grabData(buffer, true, username, password);
         
-        console.log(`Image processed, buffer size: ${buffer.length} bytes`);
-        console.log('CHange')
         return new Response(JSON.stringify({ 
             success: true,
             bufferSize: buffer.length,
