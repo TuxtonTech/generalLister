@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
-    name: 'sveltekit-app',
-    script: './build/index.js',
+    name: 'app',
+    script: './build',
     env_file: '.env',
     env: {
       NODE_ENV: 'production'
