@@ -153,7 +153,7 @@
                     // Make FMV API call
                     const result = await fetch('/api/fmv', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', "Accecpt-Encoding": 'gzip', gzip: true },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
                             imageBuffer: base64Buffer, 
                             username: account.username, 
