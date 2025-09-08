@@ -630,10 +630,10 @@ async refreshCovrPriceCookie(username: string, password: string) {
 }
 }
 
-import type { RequestHandler } from './$types';
+
 
 // Updated endpoint to handle binary data
-export const POST: RequestHandler = async ({ request }) => {
+export async function POST ({ request }) {
     try {
         const contentLength = request.headers.get('content-length');
         const maxSize = 50 * 1024 * 1024;

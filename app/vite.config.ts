@@ -5,6 +5,7 @@ import { defineConfig } from 'vite';
 import fs from 'fs';
 
 export default defineConfig({
+	
 	plugins: [tailwindcss(), sveltekit(), devtoolsJson()],
 	// server: {
 	// 	port: 443,
