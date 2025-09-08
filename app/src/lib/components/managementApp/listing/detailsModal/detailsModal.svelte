@@ -46,7 +46,7 @@ async function formatData(blobUrl: string, username: string, password: string) {
     formData.append('username', username);
     formData.append('password', password);
     
-    return form
+    return formData
 }
 
     async function blobUrlToBase64(blobUrl: string) {
