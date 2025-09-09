@@ -176,13 +176,13 @@ async function formatData(blobUrl: string, username: string, password: string) {
                     }
 
                     // Make FMV API call
-                    const response = await fetch('/api/fmv', {
+                    const r = await fetch('/api/fmv', {
                         method: 'POST',
                         body: imageFormData
                     });
 e   
-                    if (response.ok) {
-                        const data = await result.json();
+                    if (r.ok) {
+                        const data = await r.json();
                         console.log('FMV API Response:', data);
 
                         fmvData = data;
