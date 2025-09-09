@@ -157,7 +157,7 @@ async function formatData(blobUrl: string, username: string, password: string) {
             (async () => { 
                 try {
                     // Update lastItem immediately to prevent duplicate calls
-                    lastItem = $imageUrls[0];
+                    lastItem = $imageUrls[0] + "";
                     isLoadingFMV = true;
                     fmvData = null;
                
@@ -180,7 +180,7 @@ async function formatData(blobUrl: string, username: string, password: string) {
                         method: 'POST',
                         body: imageFormData
                     });
-e   
+
                     if (r.ok) {
                         const data = await r.json();
                         console.log('FMV API Response:', data);
