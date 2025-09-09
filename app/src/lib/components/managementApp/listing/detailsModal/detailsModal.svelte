@@ -176,7 +176,7 @@ async function formatData(blobUrl: string, username: string, password: string) {
                     }
 
                     // Make FMV API call
-                    const reesponse = await fetch('/api/fmv', {
+                    const response = await fetch('/api/fmv', {
                         method: 'POST',
                         body: imageFormData
                     });
