@@ -34,14 +34,15 @@
     const blob = await response.blob();
     
     // This gives you binary data as ArrayBuffer
-    return await blob.arrayBuffer();
+    return blob
 }   
 
+
 async function formatData(blobUrl: string, username: string, password: string) {
-    const response = await fetch(blobUrl);
-    const blob = await response.blob();
-    
+    const blob = await  blobUrlToBinary(blobUrl);
     const formData = new FormData();
+    if(!blob) return formData
+
     formData.append('image', blob);
     formData.append('username', username);
     formData.append('password', password);
@@ -147,6 +148,44 @@ async function formatData(blobUrl: string, username: string, password: string) {
     })
     
     $: {
+    // In your Svelte component
+async function processBatchImages() {
+    try {
+        if ($imageUrls.length === 0) {
+            console.error('No images to process');
+            return;
+        }
+
+        const formData = new FormData();
+        
+        // Convert each URL to blob and add to FormData
+        for (let i = 0; i < $imageUrls.length; i++) {
+            const url = $imageUrls[i];
+            
+            // Fetch the image as blob
+            const response = await fetch(url);
+            const blob = await response.blob();
+            
+            // Add to FormData with 'images' field name (plural for batch)
+            formData.append('images', blob, `image_${i}.jpg`);
+        }
+        
+        formData.append('format', 'base64');
+        formData.append('include_info', 'true');
+
+        // Send to your batch endpoint
+        const result = await fetch('/api/batch_image_formatting', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await result.json();
+        console.log('Batch processing result:', data);
+        
+    } catch (error) {
+        console.error('Error processing batch images:', error);
+    }
+}
         // Handle empty image URLs - navigate to listing
         if ($imageUrls.length === 0) {
             selectedPage.set("listing");
@@ -163,17 +202,17 @@ async function formatData(blobUrl: string, username: string, password: string) {
                
                     // Convert blob URL to base64
                     const account = $accountsStore.find(account => account.type === 'covr');
+                    if (!account) {
+                        alert('Please add a Covr account in the Accounts Section to enable FMV lookup.');
+                        selectedPage.set('accounts');
+                        return;
+                    }
 
                     const imageFormData = await formatData($imageUrls[0] + "", account.username, account.password);
                     // console.log('Base64 length:', binaryBuffer);
 
                     // Find COVR account
 
-                    if (!account) {
-                        alert('Please add a Covr account in the Accounts Section to enable FMV lookup.');
-                        selectedPage.set('accounts');
-                        return;
-                    }
 
                     // Make FMV API call
                     const r = await fetch('/api/fmv', {
@@ -181,6 +220,7 @@ async function formatData(blobUrl: string, username: string, password: string) {
                         body: imageFormData
                     });
 
+                    
                     if (r.ok) {
                         const data = await r.json();
                         console.log('FMV API Response:', data);
@@ -194,9 +234,10 @@ async function formatData(blobUrl: string, username: string, password: string) {
 
                         // console.error('FMV API error:', result.status, result.statusText);
                         // Optionally show user-friendly error message
-                        alert(`Failed to get FMV data: ${result.statusText}`);
+                        alert(`Failed to get FMV data: ${r.statusText}`);
                     }
 
+                    // await processBatchImages()
                 } catch (error) {
                     console.error('Error calling FMV API:', error);
                     // Optionally show user-friendly error message

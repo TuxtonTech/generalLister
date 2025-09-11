@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   
   export let account;
-    
+
   const dispatch = createEventDispatcher();
   let showPassword = false;
   
@@ -91,6 +91,7 @@
     /* overflow: hidden; */
     height: fit-content;
     margin-bottom: .5rem;
+    border-top: #7c3aed solid 2px;
   }
 
   @media (max-width: 600px) {
@@ -109,7 +110,7 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    /* background: linear-gradient(135deg, #4f46e5, #7c3aed); */
   }
 
   .account-card:hover {
