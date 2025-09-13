@@ -1,5 +1,5 @@
 <script>
-  import { signIn, getProviders } from '@auth/sveltekit';
+  import { signIn, getProviders } from '@auth/sveltekit/client';
   import { page } from '$app/stores';
 
   export let data;
@@ -20,7 +20,7 @@
   <div class="providers">
     <button 
       class="google-btn"
-      on:click={() => signIn('google', { callbackUrl: '/app' })}
+      on:click={() => signIn('google', { callbackUrl: '/dashboard' })}
     >
       <svg width="20" height="20" viewBox="0 0 24 24">
         <!-- Google icon SVG -->
