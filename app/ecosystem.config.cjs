@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'gen-app',
-    script: './start.js',
+    script: './build/index.js', // Use built version instead of start.js
     instances: 1,
     exec_mode: 'cluster',
     env_file: '.env',
