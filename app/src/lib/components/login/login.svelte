@@ -1,5 +1,5 @@
 <script>
-  import { signIn, getProviders } from '@auth/sveltekit';
+import { signIn, signOut } from '@auth/sveltekit/client';
   import { page } from '$app/stores';
 
   export let data;
