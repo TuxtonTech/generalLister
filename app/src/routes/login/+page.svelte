@@ -9,6 +9,7 @@
   let confirmPassword = '';
   let displayName = '';
   let successMessage = '';
+  console.log("")
 
   // Redirect if already authenticated
   $: if ($isAuthenticated) {
