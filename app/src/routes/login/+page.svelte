@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
-  import { authStore, isLoading, authError, isAuthenticated } from '$lib/store/auth.ts';
+  import { authStore, isLoading, authError, isAuthenticated } from '$lib/store/auth';
 
   let mode: 'signin' | 'signup' | 'reset' = 'signin';
   let email = '';
