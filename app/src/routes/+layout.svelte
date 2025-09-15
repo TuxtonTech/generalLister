@@ -1,8 +1,7 @@
 <script>
-  import { authStore } from '$lib/store/auth';
-  import { onMount } from 'svelte';
-  
-  onMount(() => {
-    authStore.init();
-  });
+  let { children } = $props();
 </script>
+
+<main>
+  {@render children()}
+</main>

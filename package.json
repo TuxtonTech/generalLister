@@ -1,5 +1,7 @@
 {
   "dependencies": {
-    "@auth/sveltekit": "^1.10.0"
+    "@auth/sveltekit": "^1.10.0",
+    "jsonwebtoken": "^9.0.2",
+    "vitest": "^3.2.4"
   }
 }

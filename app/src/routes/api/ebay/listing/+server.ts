@@ -1,26 +1,29 @@
-// +page.server.js or your API endpoint file
+// app/src/routes/api/ebay/listing/+server.ts
 import SimplifiedEbayLister from './ebay.js';
+import type { RequestHandler } from './$types';
 
-const AUTH_BASE = 'YOUR_EBAY_AUTH_BASE_64'; // Your eBay app credentials encoded in base64
+const CLIENT_ID = 'TuxtonTe-Sourcere-PRD-5755ec4ee-8cae39a6';
+const CLIENT_SECRET = 'PRD-755ec4eef06a-daee-44d7-a153-2de8';
+const AUTH_BASE = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
 
-export async function POST({ request }) {
+export const POST: RequestHandler = async ({ request }) => {
     try {
         const formData = await request.formData();
-        const refreshToken = formData.get('refresh_token');
-        const binaryImage = formData.get('image');
-        const itemDataStr = formData.get('item_data');
-        const username = formData.get('username') || 'default_user';
+        const refreshToken = formData.get('refresh_token') as string;
+        const binaryImage = formData.get('image') as File;
+        const itemDataStr = formData.get('item_data') as string;
+        const username = (formData.get('username') as string) || 'default_user';
 
-        if (!refreshToken || !binaryImage || !itemDataStr) {
+        if (!refreshToken || !itemDataStr) {
             return Response.json({
-                error: 'Missing required fields: refresh_token, image, and item_data are required'
+                error: 'Missing required fields: refresh_token and item_data are required'
             }, { status: 400 });
         }
 
         // Parse item data
         let itemData;
         try {
-            itemData = JSON.parse(itemDataStr + "");
+            itemData = JSON.parse(itemDataStr);
         } catch (error) {
             return Response.json({
                 error: 'Invalid item_data JSON format'
@@ -28,7 +31,7 @@ export async function POST({ request }) {
         }
 
         // Validate required item data fields
-        const requiredFields = ['sku', 'title', 'description', 'price', 'categoryId', 'imageUrls'];
+        const requiredFields = ['sku', 'title', 'description', 'price'];
         const missingFields = requiredFields.filter(field => !itemData[field]);
 
         if (missingFields.length > 0) {
@@ -39,7 +42,7 @@ export async function POST({ request }) {
 
         // Convert image to base64 if needed for search
         let base64Image = null;
-        if (binaryImage instanceof File) {
+        if (binaryImage instanceof File && binaryImage.size > 0) {
             const arrayBuffer = await binaryImage.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
             base64Image = buffer.toString('base64');
@@ -57,13 +60,19 @@ export async function POST({ request }) {
                     searchResults = searchResponse.results;
                 }
             } catch (error) {
-                console.warn('Image search failed:', typeof error === 'object' && error !== null && 'message' in error ? (error as { message?: string }).message : String(error));
+                console.warn('Image search failed:', error instanceof Error ? error.message : String(error));
                 // Continue with listing even if image search fails
             }
         }
 
         // List the item
-        const listingResult = await ebayLister.listItem(itemData, refreshToken, AUTH_BASE);
+        const listingResult = await ebayLister.listItem(
+            itemData, 
+            refreshToken, 
+            AUTH_BASE, 
+            username, 
+            binaryImage
+        );
 
         if (listingResult.success) {
             return Response.json({
@@ -82,49 +91,7 @@ export async function POST({ request }) {
     } catch (error) {
         console.error('Server error:', error);
         return Response.json({
-            error: 'Internal server error'
+            error: 'Internal server error: ' + (error instanceof Error ? error.message : String(error))
         }, { status: 500 });
     }
-}
-
-/*
-- refresh_token: "your_ebay_refresh_token"
-- username: "user123" (required for file storage path)
-- image: Can be one of:
-  * File (binary image data)
-  * URL string (e.g., "https://example.com/image.jpg")
-  * Base64 string
-  * Leave empty/null if no image processing needed
-- item_data: {
-  "sku": "UNIQUE-SKU-123",
-  "title": "Amazing Product Title",
-  "description": "Detailed product description",
-  "price": "29.99",
-  "categoryId": "12345", // eBay category ID
-  "imageUrls": ["https://example.com/image1.jpg"], // Optional - will be supplemented by processed image
-  "quantity": 10,
-  "condition": "NEW",
-  "aspects": {
-    "Brand": ["Your Brand"],
-    "Color": ["Red", "Blue"],
-    "Size": ["Large"]
-  },
-  "dimensions": {
-    "height": "5",
-    "length": "8", 
-    "width": "3"
-  },
-  "weight": "1.5",
-  "quantityLimit": 5
-}
-
-Image Processing Flow:
-1. If image is a URL string → use directly
-2. If image is binary data → try eBay's image hosting API
-3. If eBay hosting fails → save to uploads/{username}/{safe_product_title}/index.jpg
-4. Add processed image URL to the beginning of imageUrls array
-
-Response includes:
-- processedImageUrl: The final URL of the processed image (if any)
-- All the standard listing response fields
-*/
+};
