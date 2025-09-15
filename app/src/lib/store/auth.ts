@@ -164,7 +164,7 @@ function createAuthStore() {
           window.addEventListener('message', (event) => {
             if (event.data === 'google-auth-success') {
               clearInterval(checkClosed);
-              popup?.close();
+              // popup?.close();
               
               // Refresh to get the new user data from cookie
               window.location.reload();
