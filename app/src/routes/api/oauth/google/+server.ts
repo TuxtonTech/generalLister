@@ -4,7 +4,7 @@ import type { RequestHandler } from './$types';
 
 const CLIENT_ID = '149920645749-um1lug44d4adj6skrgh0jpaiqnna4u9b.apps.googleusercontent.com';
 const CLIENT_SECRET = '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';
-const REDIRECT_URI = 'https://tuxtontech.com/api/oauth/google/callback';
+const REDIRECT_URI = 'https://tuxtontech.com/api/oauth/google';
 
 export const GET: RequestHandler = async ({ url }) => {
   const code = url.searchParams.get('code');
