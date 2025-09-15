@@ -2,7 +2,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { authStore, user, isAuthenticated } from '$lib/stores/auth';
+  import { authStore, user, isAuthenticated } from '$lib/store/auth';
 
   let ebayAuthUrl = '';
   let isEbayConnected = false;
