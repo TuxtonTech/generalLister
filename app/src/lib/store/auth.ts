@@ -153,18 +153,20 @@ function createAuthStore() {
         );
 
         return new Promise((resolve) => {
+          let finished = false
           const checkClosed = setInterval(() => {
-            if (popup?.closed) {
-              clearInterval(checkClosed);
-              update(state => ({ ...state, isLoading: false, error: 'Authentication cancelled' }));
-              resolve({ success: false, error: 'Authentication cancelled' });
-            }
-          }, 1000);
+          //   if (popup?.closed && finished)  {
+          //     clearInterval(checkClosed);
+          //     update(state => ({ ...state, isLoading: false, error: 'Authentication cancelled' }));
+          //     resolve({ success: false, error: 'Authentication cancelled' });
+          //   }
+          // }, 1000);
 
           window.addEventListener('message', (event) => {
             if (event.data === 'google-auth-success') {
               clearInterval(checkClosed);
               popup?.close();
+              finished = true
               // Refresh to get the new user data from cookie
               // window.location.reload();
               resolve({ success: true });
