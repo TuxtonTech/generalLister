@@ -52,6 +52,7 @@
     if (result.success) {
       goto('/dashboard');
     }
+    return
   }
 
   async function handlePasswordReset() {

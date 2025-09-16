@@ -165,9 +165,8 @@ function createAuthStore() {
             if (event.data === 'google-auth-success') {
               clearInterval(checkClosed);
               popup?.close();
-              window.location.href = '/dashboard'
               // Refresh to get the new user data from cookie
-              window.location.reload();
+              // window.location.reload();
               resolve({ success: true });
             }
           }, { once: true });
