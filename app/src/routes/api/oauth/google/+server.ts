@@ -1,7 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { database } from '$lib/firebase';
-import { ref, set, get } from 'firebase/database';
+// Import firestore and Firestore functions
+import { firestore } from '$lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 const CLIENT_ID = '149920645749-um1lug44d4adj6skrgh0jpaiqnna4u9b.apps.googleusercontent.com';
 const CLIENT_SECRET = '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';
@@ -56,11 +57,12 @@ export const GET: RequestHandler = async ({ url }) => {
       displayName: googleUser.name,
       photoURL: googleUser.picture,
       emailVerified: googleUser.verified_email,
-      accounts: {}, // Initialize an empty object for accounts
+      accounts: {},
     };
 
-    const userRef = ref(database, 'users/' + user.uid);
-    await set(userRef, user);
+    // Use Firestore's doc and setDoc to create or update the user document
+    const userRef = doc(firestore, 'users', user.uid);
+    await setDoc(userRef, user);
 
     return new Response(`
       <!DOCTYPE html>

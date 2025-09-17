@@ -1,98 +1,98 @@
+// app/src/routes/login/+page.svelte
 <script lang="ts">
+  import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
+  import { authStore, isLoading, authError, isAuthenticated } from '$lib/store/auth';
 
+  let mode: 'signin' | 'signup' | 'reset' = 'signin';
+  let email = '';
+  let password = '';
+  let confirmPassword = '';
+  let displayName = '';
+  let successMessage = '';
+  let hasRedirected = false;
 
-import { goto } from '$app/navigation';
-import { onMount } from 'svelte';
-import { authStore, isLoading, authError, isAuthenticated } from '$lib/store/auth';
-
-let mode: 'signin' | 'signup' | 'reset' = 'signin';
-let email = '';
-let password = '';
-let confirmPassword = '';
-let displayName = '';
-let successMessage = '';
-let hasRedirected = false;
-
-$: if ($isAuthenticated && !hasRedirected) {
-    hasRedirected = true;
-    setTimeout(() => {
-      goto('/dashboard');
-    }, 100);
+  $: if ($isAuthenticated && !hasRedirected) {
+      hasRedirected = true;
+      setTimeout(() => {
+        goto('/dashboard');
+      }, 100);
   }
-onMount(() => {
-  authStore.init();
-  authStore.clearError();
-});
 
-async function handleEmailAuth() {
-  authStore.clearError();
-  successMessage = '';
-  if (mode === 'signup') {
-    if (password !== confirmPassword) {
-      return;
-    }
-    
-    const result = await authStore.signUp(email, password, displayName);
-    if (result.success) {
-      if (result.needsVerification) {
-        successMessage = 'Account created! Please check your email to verify your account.';
-      } else {
+  onMount(() => {
+    authStore.init();
+    authStore.clearError();
+  });
+
+  async function handleEmailAuth() {
+    authStore.clearError();
+    successMessage = '';
+    if (mode === 'signup') {
+      if (password !== confirmPassword) {
+        return;
+      }
+      
+      const result = await authStore.signUp(email, password, displayName);
+      if (result.success) {
+        if (result.needsVerification) {
+          successMessage = 'Account created! Please check your email to verify your account.';
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          goto('/dashboard');
+        }
+      }
+    } else {
+      const result = await authStore.signIn(email, password);
+      if (result.success) {
         await new Promise(resolve => setTimeout(resolve, 500));
         goto('/dashboard');
       }
     }
-  } else {
-    const result = await authStore.signIn(email, password);
-    if (result.success) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      goto('/dashboard');
-    }
   }
-}
 
-async function handleGoogleAuth() {
-  authStore.clearError();
-  try {
-    const result = await authStore.signInWithGoogle();
-    if (result.success) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        if ($isAuthenticated) {
-          goto('/dashboard');
-        } else {
+  async function handleGoogleAuth() {
+    authStore.clearError();
+    try {
+      const result = await authStore.signInWithGoogle();
+      if (result.success) {
           await new Promise(resolve => setTimeout(resolve, 1000));
           if ($isAuthenticated) {
             goto('/dashboard');
           } else {
-            console.error('Google auth completed but user not authenticated');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            if ($isAuthenticated) {
+              goto('/dashboard');
+            } else {
+              console.error('Google auth completed but user not authenticated');
+            }
           }
-        }
+      }
+    } catch (error) {
+      console.error('Google auth error:', error);
     }
-  } catch (error) {
-    console.error('Google auth error:', error);
-  }
-}
-
-async function handlePasswordReset() {
-  if (!email) {
-    return;
   }
 
-  const result = await authStore.resetPassword(email);
-  if (result.success) {
-    successMessage = 'Password reset email sent! Check your inbox.';
-    mode = 'signin';
-  }
-}
+  async function handlePasswordReset() {
+    if (!email) {
+      return;
+    }
 
-function switchMode(newMode: 'signin' | 'signup' | 'reset') {
-  mode = newMode;
-  password = '';
-  confirmPassword = '';
-  displayName = '';
-  authStore.clearError();
-  successMessage = '';
-  hasRedirected = false;
-}
+    const result = await authStore.resetPassword(email);
+    if (result.success) {
+      successMessage = 'Password reset email sent! Check your inbox.';
+      mode = 'signin';
+    }
+  }
+
+  function switchMode(newMode: 'signin' | 'signup' | 'reset') {
+    mode = newMode;
+    password = '';
+    confirmPassword = '';
+    displayName = '';
+    authStore.clearError();
+    successMessage = '';
+    hasRedirected = false;
+  }
 </script>
 
 <div class="auth-container">
@@ -538,4 +538,4 @@ function switchMode(newMode: 'signin' | 'signup' | 'reset') {
       font-size: 0.875rem;
     }
   }
-</style>
+</style>>
