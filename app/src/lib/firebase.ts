@@ -1,6 +1,4 @@
-// app/src/lib/firebase.ts
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
 import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
@@ -13,11 +11,8 @@ const firebaseConfig = {
   measurementId: "G-2HZBRRY1JV"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase services
-const auth = getAuth(app);
 const database = getDatabase(app);
 
-export { auth, database };
+export { database };

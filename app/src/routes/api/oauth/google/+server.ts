@@ -1,6 +1,7 @@
-// app/src/routes/api/oauth/google/+server.ts
 import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { database } from '$lib/firebase';
+import { ref, set, get } from 'firebase/database';
 
 const CLIENT_ID = '149920645749-um1lug44d4adj6skrgh0jpaiqnna4u9b.apps.googleusercontent.com';
 const CLIENT_SECRET = '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';
@@ -10,7 +11,6 @@ export const GET: RequestHandler = async ({ url }) => {
   const code = url.searchParams.get('code');
   
   if (!code) {
-    // Initial request - redirect to Google OAuth
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', CLIENT_ID);
     authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
@@ -22,7 +22,6 @@ export const GET: RequestHandler = async ({ url }) => {
   }
 
   try {
-    // Exchange code for tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -41,7 +40,6 @@ export const GET: RequestHandler = async ({ url }) => {
 
     const tokens = await tokenResponse.json();
 
-    // Get user info
     const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
@@ -53,14 +51,17 @@ export const GET: RequestHandler = async ({ url }) => {
     const googleUser = await userResponse.json();
 
     const user = {
-      id: googleUser.id,
+      uid: googleUser.id,
       email: googleUser.email,
       displayName: googleUser.name,
       photoURL: googleUser.picture,
       emailVerified: googleUser.verified_email,
+      accounts: {}, // Initialize an empty object for accounts
     };
 
-    // Return HTML that closes popup and notifies parent
+    const userRef = ref(database, 'users/' + user.uid);
+    await set(userRef, user);
+
     return new Response(`
       <!DOCTYPE html>
       <html>
@@ -69,18 +70,10 @@ export const GET: RequestHandler = async ({ url }) => {
         </head>
         <body>
           <script>
-          // Store user data in parent window
-          document.addEventListener('DOMContentLoaded', () => {
-          setTimeout(() => {
-          window.close();
-    }, 1000);
-          });
             if (window.opener) {
               window.opener.postMessage('google-auth-success', window.location.origin);
-              // You might also want to store user data in localStorage or send it to your backend
-              window.opener.localStorage.setItem('user', JSON.stringify(${JSON.stringify(user)}));
             }
-
+            window.close();
           </script>
           <p>Authentication successful. You can close this window.</p>
         </body>
