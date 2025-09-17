@@ -156,7 +156,7 @@ function createAuthStore() {
           let finished = false
             const checkClosed = setInterval(() => {
 
-            if (popup?.closed && finished)  {
+            if (popup?.closed && !finished)  {
               clearInterval(checkClosed);
               update(state => ({ ...state, isLoading: false, error: 'Authentication cancelled' }));
               resolve({ success: false, error: 'Authentication cancelled' });
@@ -166,7 +166,7 @@ function createAuthStore() {
           window.addEventListener('message', (event) => {
             if (event.data === 'google-auth-success') {
                 //   clearInterval(checkClosed);
-                popup?.close();
+                // popup?.close();
                 finished = true
                 console.log('Google sign in successful');
               // Refresh to get the new user data from cookie
