@@ -1,3 +1,4 @@
+// app/src/routes/login/+page.svelte
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
@@ -9,17 +10,9 @@
   let confirmPassword = '';
   let displayName = '';
   let successMessage = '';
-
-  // Add a flag to prevent multiple redirects
-  let hasRedirected = false;
-
-  // Redirect if already authenticated with proper delay
-  $: if ($isAuthenticated && !hasRedirected) {
-    hasRedirected = true;
-    // Add a small delay to ensure auth state is fully established
-    setTimeout(() => {
-      goto('/dashboard');
-    }, 100);
+  
+  $: if ($isAuthenticated) {
+    goto('/dashboard');
   }
 
   onMount(() => {
@@ -30,7 +23,6 @@
   async function handleEmailAuth() {
     authStore.clearError();
     successMessage = '';
-
     if (mode === 'signup') {
       if (password !== confirmPassword) {
         return;
@@ -38,49 +30,21 @@
       
       const result = await authStore.signUp(email, password, displayName);
       if (result.success) {
-        if (result.needsVerification) {
-          successMessage = 'Account created! Please check your email to verify your account.';
-        } else {
-          // Wait a bit for auth state to update before redirecting
-          await new Promise(resolve => setTimeout(resolve, 500));
-          goto('/dashboard');
-        }
+        successMessage = 'Account created!';
       }
     } else {
       const result = await authStore.signIn(email, password);
       if (result.success) {
-        // Wait a bit for auth state to update before redirecting
-        await new Promise(resolve => setTimeout(resolve, 500));
-        goto('/dashboard');
+        // The reactive statement will handle the redirection
       }
     }
   }
 
   async function handleGoogleAuth() {
     authStore.clearError();
-    
-    try {
-      const result = await authStore.signInWithGoogle();
-      if (result.success) {
-        // Wait longer for Google auth to fully complete
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Double-check authentication state before redirecting
-        console.log($isAuthenticated)
-        if ($isAuthenticated) {
-          goto('/dashboard');
-        } else {
-          // If still not authenticated, wait a bit more and try again
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          if ($isAuthenticated) {
-            goto('/dashboard');
-          } else {
-            console.error('Google auth completed but user not authenticated');
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Google auth error:', error);
+    const result = await authStore.signInWithGoogle();
+    if (result.success) {
+      // The reactive statement will handle the redirection
     }
   }
 
@@ -103,13 +67,11 @@
     displayName = '';
     authStore.clearError();
     successMessage = '';
-    hasRedirected = false; // Reset redirect flag when switching modes
   }
 </script>
 
 <div class="auth-container">
   <div class="auth-wrapper">
-    <!-- Header -->
     <div class="auth-header">
       <h2>
         {#if mode === 'signin'}
@@ -122,24 +84,20 @@
       </h2>
     </div>
 
-    <!-- Success Message -->
     {#if successMessage}
       <div class="success-message">
         <div>{successMessage}</div>
       </div>
     {/if}
 
-    <!-- Error Message -->
     {#if $authError}
       <div class="error-message">
         <div>{$authError}</div>
       </div>
     {/if}
 
-    <!-- Email/Password Form -->
     <form class="auth-form" on:submit|preventDefault={mode === 'reset' ? handlePasswordReset : handleEmailAuth}>
       <div class="input-group">
-        <!-- Email -->
         <div class="input-wrapper">
           <label for="email" class="sr-only">Email address</label>
           <input
@@ -155,7 +113,6 @@
         </div>
 
         {#if mode !== 'reset'}
-          <!-- Display Name (signup only) -->
           {#if mode === 'signup'}
             <div class="input-wrapper">
               <label for="displayName" class="sr-only">Full Name</label>
@@ -170,7 +127,6 @@
             </div>
           {/if}
 
-          <!-- Password -->
           <div class="input-wrapper">
             <label for="password" class="sr-only">Password</label>
             <input
@@ -185,7 +141,6 @@
             />
           </div>
 
-          <!-- Confirm Password (signup only) -->
           {#if mode === 'signup'}
             <div class="input-wrapper">
               <label for="confirmPassword" class="sr-only">Confirm Password</label>
@@ -207,7 +162,6 @@
         {/if}
       </div>
 
-      <!-- Submit Button -->
       <div>
         <button
           type="submit"
@@ -226,7 +180,6 @@
         </button>
       </div>
 
-      <!-- Google Sign In (not for reset mode) -->
       {#if mode !== 'reset'}
         <div class="divider-section">
           <div class="divider">
@@ -255,7 +208,6 @@
         </div>
       {/if}
 
-      <!-- Mode Switching Links -->
       <div class="mode-links">
         {#if mode === 'signin'}
           <div>
