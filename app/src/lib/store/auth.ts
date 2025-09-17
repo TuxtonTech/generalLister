@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 // Import firestore and Firestore functions
-import { firestore } from './firebase';
+import { firestore } from '../firebase';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { getDoc } from 'firebase/firestore'; // getDoc is for a one-time fetch
 
