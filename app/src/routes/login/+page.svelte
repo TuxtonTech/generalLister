@@ -9,17 +9,12 @@
   let confirmPassword = '';
   let displayName = '';
   let successMessage = '';
-  let hasRedirected = false;
 
-  $: if ($isAuthenticated && !hasRedirected) {
-      hasRedirected = true;
-      setTimeout(() => {
-        goto('/dashboard');
-      }, 100);
+  $: if ($isAuthenticated) {
+    goto('/dashboard');
   }
 
   onMount(() => {
-    authStore.init();
     authStore.clearError();
   });
 
@@ -33,42 +28,16 @@
       
       const result = await authStore.signUp(email, password, displayName);
       if (result.success) {
-        if (result.needsVerification) {
-          successMessage = 'Account created! Please check your email to verify your account.';
-        } else {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          goto('/dashboard');
-        }
+        // The onAuthStateChanged listener in auth.ts will handle the redirect
       }
     } else {
-      const result = await authStore.signIn(email, password);
-      if (result.success) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        goto('/dashboard');
-      }
+      await authStore.signIn(email, password);
     }
   }
 
   async function handleGoogleAuth() {
     authStore.clearError();
-    try {
-      const result = await authStore.signInWithGoogle();
-      if (result.success) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          if ($isAuthenticated) {
-            goto('/dashboard');
-          } else {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            if ($isAuthenticated) {
-              goto('/dashboard');
-            } else {
-              console.error('Google auth completed but user not authenticated');
-            }
-          }
-      }
-    } catch (error) {
-      console.error('Google auth error:', error);
-    }
+    await authStore.signInWithGoogle();
   }
 
   async function handlePasswordReset() {
@@ -90,7 +59,6 @@
     displayName = '';
     authStore.clearError();
     successMessage = '';
-    hasRedirected = false;
   }
 </script>
 
@@ -537,4 +505,4 @@
       font-size: 0.875rem;
     }
   }
-</style>>
+</style>
