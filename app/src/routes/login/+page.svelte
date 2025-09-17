@@ -66,6 +66,7 @@
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Double-check authentication state before redirecting
+        console.log($isAuthenticated)
         if ($isAuthenticated) {
           goto('/dashboard');
         } else {
