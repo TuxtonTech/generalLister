@@ -98,7 +98,15 @@ export const GET: RequestHandler = async ({ url }) => {
             if (window.opener) {
               window.opener.postMessage('google-auth-error', window.location.origin);
             }
-            window.close();
+
+
+            function receiveMessage(event) {
+              if (event.origin !== window.location.origin) {
+                return;
+              }
+                if(event.data === 'google-auth-completed') {window.close();}
+        }
+            window.addEventListener("message", receiveMessage, false);
           </script>
           <p>Authentication failed. Please try again.</p>
         </body>
