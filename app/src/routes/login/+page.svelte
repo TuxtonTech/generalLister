@@ -1,3 +1,6 @@
+<script lang="ts">
+
+
 import { goto } from '$app/navigation';
 import { onMount } from 'svelte';
 import { authStore, isLoading, authError, isAuthenticated } from '$lib/store/auth';
@@ -15,8 +18,7 @@ $: if ($isAuthenticated && !hasRedirected) {
     setTimeout(() => {
       goto('/dashboard');
     }, 100);
-}
-
+  }
 onMount(() => {
   authStore.init();
   authStore.clearError();

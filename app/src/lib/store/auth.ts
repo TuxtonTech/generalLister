@@ -1,7 +1,11 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
-import { database } from './firebase';
-import { ref, get, onValue } from 'firebase/database';
+import { getDatabase } from 'firebase/database';
+import { ref, get, onValue, set as firebaseSet, off } from 'firebase/database';
+import { app } from '$lib/firebase'; // Your Firebase config
+
+// Initialize Firebase Realtime Database
+const database = getDatabase(app);
 
 export interface User {
   uid: string;
@@ -28,44 +32,88 @@ const initialState: AuthState = {
 
 const authState = writable<AuthState>(initialState);
 
+// Keep track of database listeners for cleanup
+let currentUserListener: (() => void) | null = null;
+
 export const authStore = {
   subscribe: authState.subscribe,
   
   init: () => {
-    if (browser) {
-      authState.update(state => ({ ...state, isLoading: true }));
-      
-      const savedUser = localStorage.getItem('user');
-      if (savedUser) {
-        try {
-          const user = JSON.parse(savedUser);
-          const userRef = ref(database, `users/${user.uid}`);
-          onValue(userRef, (snapshot) => {
-            const userData = snapshot.val();
-            if (userData) {
-              authState.set({
-                user: userData,
-                isLoading: false,
-                error: null,
-                isAuthenticated: true
-              });
-            } else {
-              localStorage.removeItem('user');
-              authState.set({ ...initialState, isLoading: false });
-            }
-          });
-        } catch (error) {
-          localStorage.removeItem('user');
-          authState.set({ ...initialState, isLoading: false });
+    if (!browser) return;
+    
+    authState.update(state => ({ ...state, isLoading: true }));
+    
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        
+        // Clean up any existing listener
+        if (currentUserListener) {
+          currentUserListener();
+          currentUserListener = null;
         }
-      } else {
-        authState.update(state => ({ ...state, isLoading: false }));
+        
+        // Listen to user data changes in Firebase
+        const userRef = ref(database, `users/${user.uid}`);
+        
+        const unsubscribe = onValue(userRef, (snapshot) => {
+          const userData = snapshot.val();
+          if (userData) {
+            // Update localStorage with fresh data
+            localStorage.setItem('user', JSON.stringify(userData));
+            
+            authState.set({
+              user: userData,
+              isLoading: false,
+              error: null,
+              isAuthenticated: true
+            });
+          } else {
+            // User data doesn't exist in Firebase, sign out
+            localStorage.removeItem('user');
+            authState.set({ ...initialState, isLoading: false });
+          }
+        }, (error) => {
+          console.error('Firebase listener error:', error);
+          authState.update(state => ({
+            ...state,
+            isLoading: false,
+            error: 'Failed to load user data'
+          }));
+        });
+        
+        // Store the cleanup function
+        currentUserListener = () => off(userRef, 'value', unsubscribe);
+        
+      } catch (error) {
+        console.error('Error parsing saved user:', error);
+        localStorage.removeItem('user');
+        authState.set({ ...initialState, isLoading: false });
       }
+    } else {
+      authState.update(state => ({ ...state, isLoading: false }));
+    }
+  },
+
+  // Save user to Firebase Realtime Database
+  saveUserToFirebase: async (user: User) => {
+    if (!browser) return;
+    
+    try {
+      const userRef = ref(database, `users/${user.uid}`);
+      await firebaseSet(userRef, {
+        ...user,
+        lastLogin: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error saving user to Firebase:', error);
+      throw error;
     }
   },
 
   signIn: async (email: string, password: string) => {
-    // Existing sign-in logic (not Firebase Auth)
     authState.update(state => ({ ...state, isLoading: true, error: null }));
     
     try {
@@ -84,7 +132,14 @@ export const authStore = {
       
       if (browser) {
         localStorage.setItem('user', JSON.stringify(user));
-        // You would also save the user to Firebase here if it's not a pre-existing user
+        
+        // Save/update user in Firebase
+        try {
+          await authStore.saveUserToFirebase(user);
+        } catch (firebaseError) {
+          console.warn('Failed to save user to Firebase:', firebaseError);
+          // Continue with login even if Firebase save fails
+        }
       }
 
       authState.set({
@@ -93,6 +148,9 @@ export const authStore = {
         error: null,
         isAuthenticated: true
       });
+
+      // Set up Firebase listener for this user
+      authStore.setupUserListener(user);
 
       return { success: true };
     } catch (error) {
@@ -107,7 +165,6 @@ export const authStore = {
   },
 
   signUp: async (email: string, password: string, displayName?: string) => {
-    // Existing sign-up logic (not Firebase Auth)
     authState.update(state => ({ ...state, isLoading: true, error: null }));
     
     try {
@@ -131,7 +188,17 @@ export const authStore = {
 
       if (browser) {
         localStorage.setItem('user', JSON.stringify(result.user));
-        // You would also save the user to Firebase here
+        
+        // Save new user to Firebase
+        try {
+          const newUser = {
+            ...result.user,
+            createdAt: new Date().toISOString()
+          };
+          await authStore.saveUserToFirebase(newUser);
+        } catch (firebaseError) {
+          console.warn('Failed to save new user to Firebase:', firebaseError);
+        }
       }
 
       authState.set({
@@ -140,6 +207,9 @@ export const authStore = {
         error: null,
         isAuthenticated: true
       });
+
+      // Set up Firebase listener for this user
+      authStore.setupUserListener(result.user);
 
       return { success: true };
     } catch (error) {
@@ -164,24 +234,43 @@ export const authStore = {
       );
 
       return new Promise((resolve) => {
+        let finished = false;
+        
         const checkClosed = setInterval(() => {
-          if (popup?.closed) {
+          if (popup?.closed && !finished) {
             clearInterval(checkClosed);
+            finished = true;
             authState.update(state => ({ ...state, isLoading: false, error: 'Authentication cancelled' }));
             resolve({ success: false, error: 'Authentication cancelled' });
           }
         }, 1000);
 
-        window.addEventListener('message', (event) => {
-          if (event.data === 'google-auth-success') {
+        window.addEventListener('message', async (event) => {
+          if (event.data === 'google-auth-success' && !finished) {
             clearInterval(checkClosed);
-            // The `+server.ts` file now writes to Firebase.
-            // When the popup closes, the `init` function should be re-run
-            // or the user state checked to reflect the new data.
-            setTimeout(() => {
-              authState.init();
-              resolve({ success: true });
-            }, 500);
+            popup?.close();
+            finished = true;
+            
+            try {
+              // Wait a moment for the server to process
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              // Re-initialize to get the updated user data
+              authStore.init();
+              
+              // Wait for auth state to update
+              setTimeout(() => {
+                resolve({ success: true });
+              }, 500);
+              
+            } catch (error) {
+              authState.update(state => ({
+                ...state,
+                isLoading: false,
+                error: 'Failed to complete Google sign in'
+              }));
+              resolve({ success: false, error: 'Failed to complete Google sign in' });
+            }
           }
         }, { once: true });
       });
@@ -197,7 +286,6 @@ export const authStore = {
   },
 
   resetPassword: async (email: string) => {
-    // This is not implemented with Firebase and remains as is
     authState.update(state => ({ ...state, isLoading: true, error: null }));
     
     try {
@@ -226,16 +314,102 @@ export const authStore = {
   },
 
   signOut: async () => {
+    // Clean up Firebase listener
+    if (currentUserListener) {
+      currentUserListener();
+      currentUserListener = null;
+    }
+    
+    // Call server signout endpoint
+    try {
+      await fetch('/api/auth/signout', { 
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (error) {
+      console.error('Server signout failed:', error);
+    }
+    
     if (browser) {
       localStorage.removeItem('user');
     }
+    
     authState.set(initialState);
   },
 
   clearError: () => {
     authState.update(state => ({ ...state, error: null }));
+  },
+
+  // Helper method to set up Firebase listener for a user
+  setupUserListener: (user: User) => {
+    if (!browser) return;
+    
+    // Clean up existing listener
+    if (currentUserListener) {
+      currentUserListener();
+    }
+    
+    const userRef = ref(database, `users/${user.uid}`);
+    
+    const unsubscribe = onValue(userRef, (snapshot) => {
+      const userData = snapshot.val();
+      if (userData) {
+        // Update localStorage and state with fresh data
+        localStorage.setItem('user', JSON.stringify(userData));
+        authState.update(state => ({
+          ...state,
+          user: userData
+        }));
+      }
+    }, (error) => {
+      console.error('User data listener error:', error);
+    });
+    
+    currentUserListener = () => off(userRef, 'value', unsubscribe);
+  },
+
+  // Get user data from Firebase
+  getUserFromFirebase: async (uid: string): Promise<User | null> => {
+    if (!browser) return null;
+    
+    try {
+      const userRef = ref(database, `users/${uid}`);
+      const snapshot = await get(userRef);
+      return snapshot.exists() ? snapshot.val() : null;
+    } catch (error) {
+      console.error('Error getting user from Firebase:', error);
+      return null;
+    }
+  },
+
+  // Update user data in Firebase
+  updateUserInFirebase: async (uid: string, updates: Partial<User>) => {
+    if (!browser) return;
+    
+    try {
+      const userRef = ref(database, `users/${uid}`);
+      const currentData = await get(userRef);
+      
+      if (currentData.exists()) {
+        const updatedUser = {
+          ...currentData.val(),
+          ...updates,
+          updatedAt: new Date().toISOString()
+        };
+        
+        await firebaseSet(userRef, updatedUser);
+        
+        // Update localStorage
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      console.error('Error updating user in Firebase:', error);
+      throw error;
+    }
   }
 };
+
 // Export individual stores for easier access
 export const user = writable<User | null>(null);
 export const isLoading = writable(true);
@@ -249,3 +423,12 @@ authState.subscribe(state => {
   authError.set(state.error);
   isAuthenticated.set(state.isAuthenticated);
 });
+
+// Cleanup listeners when page unloads
+if (browser) {
+  window.addEventListener('beforeunload', () => {
+    if (currentUserListener) {
+      currentUserListener();
+    }
+  });
+}
