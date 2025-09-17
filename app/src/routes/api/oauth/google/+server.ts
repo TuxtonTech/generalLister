@@ -69,13 +69,18 @@ export const GET: RequestHandler = async ({ url }) => {
         </head>
         <body>
           <script>
-            // Store user data in parent window
+          // Store user data in parent window
+          document.addEventListener('DOMContentLoaded', () => {
+          setTimeout(() => {
+          window.close();
+    }, 1000);
+          });
             if (window.opener) {
               window.opener.postMessage('google-auth-success', window.location.origin);
               // You might also want to store user data in localStorage or send it to your backend
               window.opener.localStorage.setItem('user', JSON.stringify(${JSON.stringify(user)}));
             }
-            window.close();
+
           </script>
           <p>Authentication successful. You can close this window.</p>
         </body>

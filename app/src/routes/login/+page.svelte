@@ -9,11 +9,17 @@
   let confirmPassword = '';
   let displayName = '';
   let successMessage = '';
-  console.log("")
 
-  // Redirect if already authenticated
-  $: if ($isAuthenticated) {
-    goto('/dashboard');
+  // Add a flag to prevent multiple redirects
+  let hasRedirected = false;
+
+  // Redirect if already authenticated with proper delay
+  $: if ($isAuthenticated && !hasRedirected) {
+    hasRedirected = true;
+    // Add a small delay to ensure auth state is fully established
+    setTimeout(() => {
+      goto('/dashboard');
+    }, 100);
   }
 
   onMount(() => {
@@ -35,12 +41,16 @@
         if (result.needsVerification) {
           successMessage = 'Account created! Please check your email to verify your account.';
         } else {
+          // Wait a bit for auth state to update before redirecting
+          await new Promise(resolve => setTimeout(resolve, 500));
           goto('/dashboard');
         }
       }
     } else {
       const result = await authStore.signIn(email, password);
       if (result.success) {
+        // Wait a bit for auth state to update before redirecting
+        await new Promise(resolve => setTimeout(resolve, 500));
         goto('/dashboard');
       }
     }
@@ -48,11 +58,29 @@
 
   async function handleGoogleAuth() {
     authStore.clearError();
-    const result = await authStore.signInWithGoogle();
-    if (result.success) {
-      goto('/dashboard');
+    
+    try {
+      const result = await authStore.signInWithGoogle();
+      if (result.success) {
+        // Wait longer for Google auth to fully complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Double-check authentication state before redirecting
+        if ($isAuthenticated) {
+          goto('/dashboard');
+        } else {
+          // If still not authenticated, wait a bit more and try again
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          if ($isAuthenticated) {
+            goto('/dashboard');
+          } else {
+            console.error('Google auth completed but user not authenticated');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Google auth error:', error);
     }
-    return
   }
 
   async function handlePasswordReset() {
@@ -74,6 +102,7 @@
     displayName = '';
     authStore.clearError();
     successMessage = '';
+    hasRedirected = false; // Reset redirect flag when switching modes
   }
 </script>
 
@@ -271,9 +300,6 @@
     </form>
   </div>
 </div>
-
-
-
 
 <style>
   .auth-container {
