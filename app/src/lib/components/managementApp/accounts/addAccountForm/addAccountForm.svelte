@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { accountsStore } from '$lib/store/app/accounts/accounts';
 	import { selectedPage } from '$lib/store/app/helpers/selectedPage';
   import { createEventDispatcher } from 'svelte';
@@ -59,7 +59,7 @@
     selectedPage.set('accounts')
   }
 
-  
+
  async function handleEbayConnect() {
     isConnectingEbay = true;
     try {
