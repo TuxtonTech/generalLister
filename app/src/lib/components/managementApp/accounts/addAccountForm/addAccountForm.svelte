@@ -38,42 +38,41 @@
     return Object.keys(errors).length === 0;
   }
   
-  function handleSubmit() {
+  async function handleSubmit() { // Make the function async
     if (!validateForm()) return;
-    
-    const accountData = {
+
+    const accountData: any = {
       name: formData.name,
       type: formData.type,
     };
-    
+  
     if (formData.type === 'covr') {
       accountData.username = formData.username;
       accountData.password = formData.password; // In real app, hash this
     } else if (formData.type === 'ebay') {
       accountData.oauthConnected = isConnectingEbay;
-      // accountData.oauthToken = isConnectingEbay ? 'mock_oauth_token' : null;
     }
-    
-    accountsStore.add(accountData);
+  
+    await accountsStore.add(accountData); // Add await here
     resetForm();
     dispatch('accountAdded');
     selectedPage.set('accounts')
   }
-  async function handleEbayConnect() {
+
+  
+ async function handleEbayConnect() {
     isConnectingEbay = true;
-
     try {
-        const response = await fetch('/api/ebay/login'); // returns authUrl
+        const response = await fetch('/api/ebay/login');
         if (!response.ok) throw new Error('Failed to initiate eBay OAuth');
-
         const { authUrl } = await response.json();
         const popup = window.open(authUrl, '_blank', 'width=600,height=700');
 
         // Listen for success message from popup
-        function handleMessage(event) {
+        async function handleMessage(event) { // Make the listener async
             if (event.origin !== window.location.origin) return;
             if (event.data.type === 'ebay-auth-success') {
-                accountsStore.add(event.data.user);
+                await accountsStore.add(event.data.user); // Add await here
                 popup?.close();
                 window.removeEventListener('message', handleMessage);
                 isConnectingEbay = false;
@@ -82,12 +81,11 @@
         }
 
         window.addEventListener('message', handleMessage);
-
     } catch (error) {
         alert('Failed to connect to eBay');
         isConnectingEbay = false;
     }
-}
+  }
 
   
   function resetForm() {

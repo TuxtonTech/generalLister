@@ -14,6 +14,16 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, firestore } from '$lib/firebase';
+import type { Account } from './app/accounts/accounts'; 
+
+export interface User {
+    uid: string;
+    email: string | null;
+    displayName?: string | null;
+    photoURL?: string | null;
+    emailVerified: boolean;
+    accounts?: Account[];
+}
 
 export interface User {
   uid: string;
