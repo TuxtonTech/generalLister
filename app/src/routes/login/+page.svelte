@@ -69,7 +69,7 @@
 <div class="auth-container">
   <div class="auth-card">
     <div class="auth-header">
-      <div class="logo"><img src="https://" alt="">Listify</div>
+      <button class="logo"><img src="https://" alt="" >Listify</button>
       <h2>
         {#if mode === 'signin'}
           Welcome Back

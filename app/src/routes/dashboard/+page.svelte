@@ -151,7 +151,7 @@
               Welcome back{$user?.displayName ? `, ${$user.displayName.split(" ")[0]}` : ''}! 
             </h2>
             <p class="welcome-subtitle">
-              Ready to boost your sales? Add some more listings <button style="background: linear-gradient(135deg, rgb(110 197 141), rgb(155, 155, 255)); padding: .5rem 1rem !important; margin-left: .5rem;">Get it gone</button>
+              Ready to boost your sales? Add some more listings <button style="background: linear-gradient(135deg, rgb(110 197 141), rgb(155, 155, 255)); padding: .5rem 1rem !important; margin-left: .5rem;" on:click={() => goto('/app')}>Get it gone</button>
             </p>
             <div class="growth-indicator">
               <div class="growth-card">
