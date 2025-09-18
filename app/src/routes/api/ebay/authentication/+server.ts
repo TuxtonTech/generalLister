@@ -116,7 +116,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
             </head>
             <body>
                 <div class="container">
-                    <h2 class="success">✓ eBay Connected Successfully!</h2>
+                    <h2 class="success">eBay Connected Successfully!</h2>
                     <p class="loading">Closing window...</p>
                 </div>
                 <script>
