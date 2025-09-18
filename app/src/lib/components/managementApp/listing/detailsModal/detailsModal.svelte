@@ -22,7 +22,10 @@
     let isLoadingFMV: boolean = false;
     let fmvData: any = null;
 
-  
+    let accounts: any[] = [];
+    accountsStore.subscribe(value => {
+        accounts = value;
+    });
 
     $: {
 
@@ -263,45 +266,85 @@ async function processBatchImages() {
     // Selectable Marketplaces
     let marketplaces = [
         { name: 'eBay', selected: false },
-        { name: 'Facebook', selected: false },
-        { name: 'Etsy', selected: false },
+        // { name: 'Facebook', selected: false },
+        // { name: 'Etsy', selected: false },
     ];
 
-    async function handleSubmit() {
-        const formData = {
-            title,
-            price,
-            quantity,
-            listingAspects,
-            description,
-            selectedMarketplaces: marketplaces.filter(m => m.selected).map(m => m.name),
-            fmvData: fmvData // Include the original FMV data for reference
-        };
-        console.log('Form data submitted:', formData);
+    // Add this line with your other reactive variables at the top of the <script>
 
+
+async function handleSubmit() {
+    // 1. Find the first available eBay account from your store
+    const ebayAccount = accounts.find(acc => acc.type === 'ebay' && acc.oAuthToken);
+
+    // 2. Check if an eBay account is configured
+    if (!ebayAccount) {
+        alert('No configured eBay account found. Please add one in the Accounts section.');
+        selectedPage.set('accounts'); // Redirect user to add an account
+        return;
+    }
+    
+    // 3. Check for the refresh token
+    if (!ebayAccount.refresh_token) {
+        alert('The selected eBay account is missing a refresh token. Please reconnect the account.');
+        return;
+    }
+
+    const itemData = {
+        sku: "UNIQUE-SKU-" + Date.now(), // Generate a unique SKU for each listing
+        title,
+        price,
+        quantity,
+        description,
+        aspects: listingAspects,
+        marketplaces: marketplaces.filter(m => m.selected).map(m => m.name),
+        fmvData: fmvData
+    };
+
+    const formData = new FormData();
+
+    // 4. Use the dynamic credentials from the store
+    formData.append('refresh_token', ebayAccount.refresh_token);
+    formData.append('username', ebayAccount.name); // Using the account name as the username
+    formData.append('item_data', JSON.stringify(itemData));
+
+    // 5. Fetch each image URL, convert it to a Blob, and append it
+    for (const imageUrl of $imageUrls) {
+        if (imageUrl) {
+            try {
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                formData.append('images', blob, 'image.jpg');
+            } catch (error) {
+                console.error('Error fetching image blob:', error);
+                alert('Could not process one or more images. Please try again.');
+                return; // Stop the submission if an image fails
+            }
+        }
+    }
+
+    // 6. Send the request
+    try {
         const res = await fetch('/api/ebay/listing', {
             method: 'POST',
-            body: JSON.stringify({
-                refresh_token: "your_ebay_refresh_token", // Replace with actual token management
-                username: "user123", // Replace with actual user context
-                item_data: {
-                    sku: "UNIQUE-SKU-123", // Generate or get from context
-                    title: formData.title,
-                    description: formData.description,
-                    price: formData.price,
-                    quantity: formData.quantity,
-                    aspects: formData.listingAspects,
-                    marketplaces: formData.selectedMarketplaces,
-                    fmvData: formData.fmvData
-                },
-                image: $imageUrls[0] || null // Send first image or null
-            }),
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            body: formData
+            // No 'Content-Type' header needed; the browser sets it for FormData
         });
-        // alert('Form submitted! Check the console for the data.');
+
+        if (res.ok) {
+            const result = await res.json();
+            console.log('Listing successful:', result);
+            alert('Listing created successfully! Listing ID: ' + result.listingId);
+        } else {
+            const errorResult = await res.json();
+            console.error('Failed to create listing:', errorResult);
+            alert('Failed to create listing: ' + errorResult.error);
+        }
+    } catch (error) {
+        console.error('Error submitting form:', error);
+        alert('An error occurred while submitting the form.');
     }
+}
 
     // Function to manually refresh FMV data
     function refreshFMV() {

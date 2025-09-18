@@ -100,9 +100,7 @@
   }
 </script>
 
-<svelte:head>
-  <title>eBay Listing Dashboard</title>
-</svelte:head>
+
 
 <div class="dashboard-container">
   <!-- Enhanced Navigation -->
@@ -116,7 +114,7 @@
                 <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
               </svg>
             </div>
-            <h1 class="brand-title">ListingPro</h1>
+            <h1 class="brand-title">Listify</h1>
           </div>
         </div>
         <div class="nav-right">
@@ -139,8 +137,8 @@
   </nav>
 
   <!-- Main Content -->
-  <div class="main-content">
-    <div class="content-wrapper">
+  <div class="main-content" style="">
+    <div class="content-wrapper" style="">
       
       <!-- Welcome Section with Stats -->
       <div class="hero-section">
@@ -150,10 +148,10 @@
           <div class="welcome-bg-decoration-2"></div>
           <div class="welcome-content">
             <h2 class="welcome-title">
-              Welcome back{$user?.displayName ? `, ${$user.displayName}` : ''}! 🚀
+              Welcome back{$user?.displayName ? `, ${$user.displayName.split(" ")[0]}` : ''}! 
             </h2>
             <p class="welcome-subtitle">
-              Ready to boost your eBay sales? Your dashboard is looking great today.
+              Ready to boost your sales? Add some more listings <button style="background: linear-gradient(135deg, rgb(110 197 141), rgb(155, 155, 255)); padding: .5rem 1rem !important; margin-left: .5rem;">Get it gone</button>
             </p>
             <div class="growth-indicator">
               <div class="growth-card">
@@ -169,7 +167,7 @@
           <div class="stat-card">
             <div class="stat-content">
               <div class="stat-info">
-                <p class="stat-label">Total Earnings</p>
+                <p class="stat-label">Total Revenue</p>
                 <p class="stat-value earnings">${dashboardStats.totalEarnings.toLocaleString()}</p>
               </div>
               <div class="stat-icon earnings-icon">💸</div>
@@ -191,8 +189,10 @@
       <!-- eBay Connection Section -->
       <div class="ebay-section">
         <div class="section-header">
-          <h3 class="section-title">eBay Integration</h3>
-          <p class="section-subtitle">Connect your eBay account to start listing and managing your items</p>
+          <h3 class="section-title">Orders</h3>
+          <p class="section-subtitle">{
+            $user?.accounts?.find(acc => acc.provider == 'ebay') || true ? 'Manage your eBay orders and track sales performance' : 'Connect your eBay account to start listing and managing your items'}
+        </p>
         </div>
         
         <div class="ebay-content">
@@ -349,7 +349,9 @@
 <style>
   /* Global Styles */
   .dashboard-container {
-    min-height: 100vh;
+    /* min-height: 100vh; */
+    height: 100dvh;
+    overflow: scroll;
     background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #e8eaf6 100%);
   }
 
@@ -465,7 +467,6 @@
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: color 0.2s ease;
   }
 
   .sign-out-btn:hover {
@@ -499,6 +500,11 @@
     .content-wrapper {
       padding: 1.5rem 0;
     }
+  }
+
+  .main-content, .content-wrapper {
+
+    height: 100dvh;
   }
 
   /* Hero Section */

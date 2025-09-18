@@ -60,449 +60,399 @@
     authStore.clearError();
     successMessage = '';
   }
-</script>
 
+  // document.getElementsByTagName('body')[0].style.margin = '0px';  
+</script>
+		<svelte:head>
+      <title>{mode === 'signin' ? 'Sign In' : mode === 'signup' ? 'Sign Up' : 'Reset Password'}</title>
+    </svelte:head>
 <div class="auth-container">
-  <div class="auth-wrapper">
+  <div class="auth-card">
     <div class="auth-header">
+      <div class="logo"><img src="https://" alt="">Listify</div>
       <h2>
         {#if mode === 'signin'}
-          Sign in to your account
+          Welcome Back
         {:else if mode === 'signup'}
-          Create your account
+          Create Your Account
         {:else}
-          Reset your password
+          Reset Password
         {/if}
       </h2>
+      <p class="subtitle">
+        {#if mode === 'signin'}
+          Sign in to continue to your dashboard
+        {:else if mode === 'signup'}
+          Get started with your new account
+        {:else}
+          Enter your email to receive a reset link
+        {/if}
+      </p>
     </div>
 
     {#if successMessage}
-      <div class="success-message">
-        <div>{successMessage}</div>
+      <div class="message success">
+        {successMessage}
       </div>
     {/if}
 
     {#if $authError}
-      <div class="error-message">
-        <div>{$authError}</div>
+      <div class="message error">
+        {$authError}
       </div>
     {/if}
 
     <form class="auth-form" on:submit|preventDefault={mode === 'reset' ? handlePasswordReset : handleEmailAuth}>
       <div class="input-group">
         <div class="input-wrapper">
-          <label for="email" class="sr-only">Email address</label>
+          <label for="email">Email address</label>
           <input
             id="email"
-            name="email"
             type="email"
             autocomplete="email"
             required
             bind:value={email}
-            class="form-input rounded-top"
-            placeholder="Email address"
+            placeholder="you@example.com"
           />
         </div>
 
-        {#if mode !== 'reset'}
-          {#if mode === 'signup'}
-            <div class="input-wrapper">
-              <label for="displayName" class="sr-only">Full Name</label>
-              <input
-                id="displayName"
-                name="displayName"
-                type="text"
-                bind:value={displayName}
-                class="form-input"
-                placeholder="Full Name (optional)"
-              />
-            </div>
-          {/if}
-
+        {#if mode === 'signup'}
           <div class="input-wrapper">
-            <label for="password" class="sr-only">Password</label>
+            <label for="displayName">Full Name</label>
+            <input
+              id="displayName"
+              type="text"
+              bind:value={displayName}
+              placeholder="Your Name (Optional)"
+            />
+          </div>
+        {/if}
+
+        {#if mode !== 'reset'}
+          <div class="input-wrapper">
+            <label for="password">Password</label>
             <input
               id="password"
-              name="password"
               type="password"
               autocomplete={mode === 'signin' ? 'current-password' : 'new-password'}
               required
               bind:value={password}
-              class="form-input {mode === 'signin' ? 'rounded-bottom' : ''}"
-              placeholder="Password"
+              placeholder="••••••••"
             />
           </div>
+        {/if}
 
-          {#if mode === 'signup'}
-            <div class="input-wrapper">
-              <label for="confirmPassword" class="sr-only">Confirm Password</label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                autocomplete="new-password"
-                required
-                bind:value={confirmPassword}
-                class="form-input rounded-bottom {mode === 'signup' && confirmPassword && password !== confirmPassword ? 'error' : ''}"
-                placeholder="Confirm Password"
-              />
-              {#if mode === 'signup' && confirmPassword && password !== confirmPassword}
-                <p class="password-mismatch">Passwords do not match</p>
-              {/if}
-            </div>
-          {/if}
+        {#if mode === 'signup'}
+          <div class="input-wrapper">
+            <label for="confirmPassword">Confirm Password</label>
+            <input
+              id="confirmPassword"
+              type="password"
+              autocomplete="new-password"
+              required
+              bind:value={confirmPassword}
+              class:error={confirmPassword && password !== confirmPassword}
+              placeholder="••••••••"
+            />
+            {#if confirmPassword && password !== confirmPassword}
+              <p class="password-mismatch">Passwords do not match</p>
+            {/if}
+          </div>
         {/if}
       </div>
-
-      <div>
-        <button
-          type="submit"
-          disabled={$isLoading || (mode === 'signup' && password !== confirmPassword)}
-          class="submit-button"
-        >
-          {#if $isLoading}
-            Processing...
-          {:else if mode === 'signin'}
-            Sign in
-          {:else if mode === 'signup'}
-            Sign up
-          {:else}
-            Send reset email
-          {/if}
-        </button>
-      </div>
-
-      {#if mode !== 'reset'}
-        <div class="divider-section">
-          <div class="divider">
-            <div class="divider-line">
-              <div></div>
-            </div>
-            <div class="divider-text">
-              <span>Or continue with</span>
-            </div>
+      
+      {#if mode === 'signin'}
+          <div class="extra-options">
+              <button type="button" on:click={() => switchMode('reset')} class="mode-link">
+                  Forgot password?
+              </button>
           </div>
-
-          <button
-            type="button"
-            on:click={handleGoogleAuth}
-            disabled={$isLoading}
-            class="google-button"
-          >
-            <svg class="google-icon" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-            <span class="google-text">Google</span>
-          </button>
-        </div>
       {/if}
 
-      <div class="mode-links">
-        {#if mode === 'signin'}
-          <div>
-            <button
-              type="button"
-              on:click={() => switchMode('reset')}
-              class="mode-link"
-            >
-              Forgot your password?
-            </button>
-          </div>
-          <div>
-            <button
-              type="button"
-              on:click={() => switchMode('signup')}
-              class="mode-link"
-            >
-              Don't have an account? Sign up
-            </button>
-          </div>
+
+      <button type="submit" disabled={$isLoading} class="submit-button">
+        {#if $isLoading}
+            <div class="spinner"></div>
+        {:else if mode === 'signin'}
+          Sign In
         {:else if mode === 'signup'}
-          <div>
-            <button
-              type="button"
-              on:click={() => switchMode('signin')}
-              class="mode-link"
-            >
-              Already have an account? Sign in
-            </button>
-          </div>
+          Create Account
         {:else}
-          <div>
-            <button
-              type="button"
-              on:click={() => switchMode('signin')}
-              class="mode-link"
-            >
-              Back to sign in
-            </button>
-          </div>
+          Send Reset Link
         {/if}
-      </div>
+      </button>
+
+      {#if mode !== 'reset'}
+        <div class="divider">
+          <span>OR</span>
+        </div>
+
+        <button type="button" on:click={handleGoogleAuth} disabled={$isLoading} class="google-button">
+          <svg class="google-icon" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Continue with Google
+        </button>
+      {/if}
+
     </form>
+    
+    <div class="mode-switch">
+      {#if mode === 'signin'}
+        Don't have an account? <button type="button" on:click={() => switchMode('signup')} class="mode-link">Sign Up</button>
+      {:else if mode === 'signup'}
+        Already have an account? <button type="button" on:click={() => switchMode('signin')} class="mode-link">Sign In</button>
+      {:else}
+        <button type="button" on:click={() => switchMode('signin')} class="mode-link">Back to Sign In</button>
+      {/if}
+    </div>
   </div>
 </div>
 
 <style>
+  :root {
+    --brand-primary: #6366f1;
+    --brand-secondary: #818cf8;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --surface-background: #ffffff;
+    --page-background: #f3f4f6;
+    --border-color: #d1d5db;
+    --success-bg: #d1fae5;
+    --success-text: #065f46;
+    --error-bg: #fee2e2;
+    --error-text: #991b1b;
+  }
+
+
+
   .auth-container {
-    min-height: 100vh;
+    height: 100%;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #f9fafb;
-    padding: 3rem 1rem;
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+    /* padding: 2rem 1rem; */
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   }
 
-  @media (min-width: 640px) {
-    .auth-container {
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .auth-container {
-      padding-left: 2rem;
-      padding-right: 2rem;
-    }
-  }
-
-  .auth-wrapper {
-    max-width: 28rem;
+  .auth-card {
+    background: var(--surface-background);
+    color: var(--text-primary);
+    border-radius: 1rem;
+    padding: 2.5rem;
     width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
+    max-width: 26rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .auth-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  
+  .logo {
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+      color: white;
+      width: 78px;
+      height: 48px;
+      padding: 0rem 3.5rem;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
   }
 
   .auth-header h2 {
-    margin-top: 1.5rem;
+    font-size: 1.75rem;
+    font-weight: 700;
+  }
+
+  .auth-header .subtitle {
+    margin-top: 0.5rem;
+    color: var(--text-secondary);
+  }
+
+  .message {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
     text-align: center;
-    font-size: 1.875rem;
-    font-weight: 800;
-    color: #111827;
   }
 
-  .success-message {
-    border-radius: 0.375rem;
-    background-color: #f0fdf4;
-    padding: 1rem;
+  .message.success {
+    background: var(--success-bg);
+    color: var(--success-text);
   }
 
-  .success-message div {
-    font-size: 0.875rem;
-    color: #166534;
+  .message.error {
+    background: var(--error-bg);
+    color: var(--error-text);
   }
-
-  .error-message {
-    border-radius: 0.375rem;
-    background-color: #fef2f2;
-    padding: 1rem;
-  }
-
-  .error-message div {
-    font-size: 0.875rem;
-    color: #991b1b;
-  }
-
+  
   .auth-form {
-    margin-top: 2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
   }
-
+  
   .input-group {
-    border-radius: 0.375rem;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    display: flex;
-    flex-direction: column;
-    gap: -1px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
   }
 
   .input-wrapper {
-    position: relative;
+      display: flex;
+      flex-direction: column;
+  }
+  
+  .input-wrapper label {
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      font-size: 0.875rem;
   }
 
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .form-input {
-    position: relative;
-    display: block;
+  .input-wrapper input {
     width: 100%;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid #d1d5db;
-    color: #111827;
-    font-size: 0.875rem;
-    background-color: white;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    background-color: var(--page-background);
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+  }
+  
+  .input-wrapper input:focus {
+      outline: none;
+      border-color: var(--brand-primary);
+      background-color: var(--surface-background);
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
   }
 
-  .form-input::placeholder {
-    color: #6b7280;
+  .input-wrapper input.error {
+      border-color: var(--error-text);
   }
-
-  .form-input:focus {
-    outline: none;
-    border-color: #6366f1;
-    box-shadow: 0 0 0 1px #6366f1;
-    z-index: 10;
-  }
-
-  .form-input.rounded-top {
-    border-top-left-radius: 0.375rem;
-    border-top-right-radius: 0.375rem;
-  }
-
-  .form-input.rounded-bottom {
-    border-bottom-left-radius: 0.375rem;
-    border-bottom-right-radius: 0.375rem;
-  }
-
-  .form-input.error {
-    border-color: #fca5a5;
-  }
-
+  
   .password-mismatch {
-    margin-top: 0.25rem;
+      margin-top: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--error-text);
+  }
+  
+  .extra-options {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: -1rem;
+  }
+
+  .submit-button, .google-button {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 0.5rem;
     font-size: 0.875rem;
-    color: #dc2626;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
   }
 
   .submit-button {
-    position: relative;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    padding: 0.5rem 1rem;
-    border: 1px solid transparent;
-    font-size: 0.875rem;
-    font-weight: 500;
-    border-radius: 0.375rem;
+    background: var(--brand-primary);
     color: white;
-    background-color: #4f46e5;
-    cursor: pointer;
-    transition: background-color 0.2s;
   }
-
+  
   .submit-button:hover:not(:disabled) {
-    background-color: #4338ca;
+      background: var(--brand-secondary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
-
-  .submit-button:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px #4f46e5, 0 0 0 4px rgba(79, 70, 229, 0.1);
-  }
-
+  
   .submit-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+      background-color: #a5b4fc;
+      cursor: not-allowed;
   }
-
-  .divider-section {
-    margin-top: 1.5rem;
-  }
-
-  .divider {
-    position: relative;
-  }
-
-  .divider-line {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-  }
-
-  .divider-line div {
-    width: 100%;
-    border-top: 1px solid #d1d5db;
-  }
-
-  .divider-text {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    font-size: 0.875rem;
-  }
-
-  .divider-text span {
-    padding: 0 0.5rem;
-    background-color: #f9fafb;
-    color: #6b7280;
-  }
-
+  
   .google-button {
-    margin-top: 1.5rem;
-    width: 100%;
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0.5rem 1rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.375rem;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    background-color: white;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #6b7280;
-    cursor: pointer;
-    transition: background-color 0.2s;
+      background: var(--surface-background);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
   }
-
+  
   .google-button:hover:not(:disabled) {
-    background-color: #f9fafb;
-  }
-
-  .google-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+      background-color: var(--page-background);
   }
 
   .google-icon {
     width: 1.25rem;
     height: 1.25rem;
   }
-
-  .google-text {
-    margin-left: 0.5rem;
+  
+  .divider {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+  }
+  
+  .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border-color);
   }
 
-  .mode-links {
+  .mode-switch {
+    margin-top: 1rem;
     text-align: center;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
   }
 
   .mode-link {
     background: none;
     border: none;
-    color: #4f46e5;
-    font-size: 0.875rem;
+    color: var(--brand-primary);
+    font-weight: 600;
     cursor: pointer;
-    transition: color 0.2s;
+    padding: 0;
   }
-
+  
   .mode-link:hover {
-    color: #6366f1;
+      text-decoration: underline;
+  }
+  
+  .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
   }
 
-  @media (min-width: 640px) {
-    .form-input {
-      font-size: 0.875rem;
-    }
+  @keyframes spin {
+      to { transform: rotate(360deg); }
   }
+
 </style>

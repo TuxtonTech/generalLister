@@ -89,7 +89,7 @@
 
   .accounts-grid {
     height: calc(100% - 0px) ;
-    overflow: scroll;
+    /* overflow: scroll; */
     width: 100%;
     /* display: inline; */
   }
