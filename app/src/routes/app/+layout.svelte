@@ -1,8 +1,9 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { isAuthenticated, isLoading } from '$lib/store/auth';
-
-  let isAuthorized = false;
+    let { children } = $props();
+  // Declare isAuthorized as reactive state using $state
+  let isAuthorized = $state(false);
 
   // This Svelte 5 effect will protect this entire route group
   $effect(() => {
