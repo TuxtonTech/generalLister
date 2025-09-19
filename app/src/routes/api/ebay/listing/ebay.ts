@@ -431,7 +431,7 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
     };
 }
   getCategoryId(): number {
-    return 63;
+    return 259104;
   }
 
   async createOffer(itemData: { price: string; sku: any; categoryId: any; description: any; quantityLimit: any; }, merchantKey: any, policyIds: any[]) {
