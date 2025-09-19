@@ -198,7 +198,7 @@ class SimplifiedEbayLister {
   }
 
   // New method to upload image to eBay using Picture Services (EPS)
-  async uploadImageToEbay(imageBuffer: Buffer): Promise<ImageUploadResponse> {
+  async uploadImageToEbay(imageBuffer: Buffer, sku: String): Promise<ImageUploadResponse> {
     try {
       // Convert buffer to base64
       const base64Image = imageBuffer.toString('base64');
@@ -283,7 +283,7 @@ class SimplifiedEbayLister {
       console.log(`Processing image ${i + 1}/${imageBuffers.length}`);
 
       // Try eBay Picture Services (EPS) first
-      let uploadResult = await this.uploadImageToEbay(buffer);
+      let uploadResult = await this.uploadImageToEbay(buffer, sku);
 
       if (!uploadResult.success) {
         console.warn(`eBay EPS upload failed for image ${i + 1}: ${uploadResult.error}`);
