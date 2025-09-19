@@ -88,7 +88,7 @@ export const POST: RequestHandler = async ({ request }) => {
                 message: listingResult.message,
                 listingId: listingResult.listingId,
                 offerId: listingResult.offerId,
-                searchResults: searchResults // Optional: include search results if available
+                // searchResults: searchResults // Optional: include search results if available
             });
         } else {
             return Response.json({
