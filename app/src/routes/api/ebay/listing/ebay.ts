@@ -100,7 +100,9 @@ class SimplifiedEbayLister {
     this.headers = {
       "Authorization": `Bearer ${this.access_token}`,
       "Content-type": "application/json",
-      "Accept-Language": "en-US"
+      "Accept-Language": "en-US",
+      "Content-Language": "en-US",
+
     };
   }
 
