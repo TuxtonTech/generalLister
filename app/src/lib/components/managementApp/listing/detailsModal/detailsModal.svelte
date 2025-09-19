@@ -285,7 +285,7 @@ async function handleSubmit() {
     }
 
     const itemData = {
-        sku: "UNIQUE-SKU-" + Date.now(), // Generate a unique SKU for each listing
+        sku: btoa(title), // Generate a unique SKU for each listing
         title,
         price,
         quantity,
