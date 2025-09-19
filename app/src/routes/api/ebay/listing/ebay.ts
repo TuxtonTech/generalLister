@@ -99,7 +99,7 @@ class SimplifiedEbayLister {
     this.headers = {
       "Authorization": `Bearer ${this.access_token}`,
       "Content-type": "application/json",
-      "Content-Language": "en-US"
+      "Accept-Language": "en-US"
     };
   }
 
@@ -403,8 +403,6 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
         body: JSON.stringify(inventoryItem)
     });
 
-  console.log(await response.json())
-
     return {
         status: response.status,
         success: response.ok
@@ -414,7 +412,7 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
     return 63;
   }
 
-  async createOffer(itemData: { price: string; sku: any; description: any; quantityLimit: any; }, merchantKey: any, policyIds: any[]) {
+  async createOffer(itemData: { price: string; sku: any; categoryId: any; description: any; quantityLimit: any; }, merchantKey: any, policyIds: any[]) {
     const price = parseFloat(itemData.price);
     
     const offer = {
@@ -534,6 +532,7 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
         {
           price: String(itemData.price),
           sku: itemData.sku,
+          categoryId: this.getCategoryId(),
           description: itemData.description,
           quantityLimit: itemData.quantityLimit
         },
