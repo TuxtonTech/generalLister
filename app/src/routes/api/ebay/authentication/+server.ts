@@ -121,15 +121,19 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
                 </div>
                 <script>
                     try {
-                        // Store eBay user data in parent window's localStorage
-                        if (window.opener && window.opener.localStorage) {
-                            window.opener.localStorage.setItem('ebayUser', JSON.stringify(${JSON.stringify(userData)}));
-                            window.opener.postMessage('ebay-auth-success', window.location.origin);
+                        if (window.opener) {
+                            // Create a message object that includes the user data
+                            const message = {
+                                type: 'ebay-auth-success',
+                                user: ${JSON.stringify(userData)}
+                            };
+                            // Send the entire object back to the main window
+                            window.opener.postMessage(message, window.location.origin);
                         }
                     } catch (error) {
                         console.error('Failed to communicate with parent window:', error);
                     }
-                    
+                        
                     // Close window after a short delay
                     setTimeout(function() {
                         window.close();
@@ -174,18 +178,11 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
                     <p>Please try again.</p>
                 </div>
                 <script>
-                    try {
-                        if (window.opener) {
-                            window.opener.postMessage('ebay-auth-error', window.location.origin);
-                        }
-                    } catch (e) {
-                        console.error('Failed to communicate with parent window:', e);
-                    }
-                    
-                    setTimeout(function() {
-                        window.close();
-                    }, 3000);
-                </script>
+    // Close window after a short delay
+    setTimeout(function() {
+        window.close();
+    }, 3000);
+</script>
             </body>
             </html>
         `, { 

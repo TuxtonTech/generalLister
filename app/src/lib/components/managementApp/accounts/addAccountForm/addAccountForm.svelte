@@ -68,11 +68,15 @@
         const { authUrl } = await response.json();
         const popup = window.open(authUrl, '_blank', 'width=600,height=700');
 
-        // Listen for success message from popup
-        async function handleMessage(event) { // Make the listener async
+        // Listen for the detailed message from the popup
+        async function handleMessage(event) {
             if (event.origin !== window.location.origin) return;
-            if (event.data.type === 'ebay-auth-success') {
-                await accountsStore.add(event.data.user); // Add await here
+            
+            // This check will now work correctly
+            if (event.data && event.data.type === 'ebay-auth-success') {
+                // event.data.user now contains the tokens
+                await accountsStore.add(event.data.user); 
+                
                 popup?.close();
                 window.removeEventListener('message', handleMessage);
                 isConnectingEbay = false;
@@ -82,11 +86,10 @@
 
         window.addEventListener('message', handleMessage);
     } catch (error) {
-        alert('Failed to connect to eBay');
+        alert('Failed to connect to eBay. Please try again.');
         isConnectingEbay = false;
     }
-  }
-
+}
   
   function resetForm() {
     formData = {
