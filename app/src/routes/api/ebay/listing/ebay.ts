@@ -20,7 +20,6 @@ interface ItemData {
     imageUrls?: string[];
     title: string;
     sku: string;
-    categoryId?: string;
     quantityLimit?: number;
 }
 
@@ -66,7 +65,6 @@ interface InventoryItem {
 interface InventoryItemResponse {
   status: number;
   success: boolean;
-  error?: string;
 }
 
 interface RefreshTokenResponse {
@@ -371,7 +369,7 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
             value: price,
             currency: "USD"
         },
-        condition: itemData.condition || "NEW",
+        condition: itemData.condition || "USED_GOOD",
         locale: "en_US",
         packageWeightAndSize: {
             dimensions: {
@@ -399,34 +397,22 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
         sku: itemData.sku
     };
 
-  console.log('Creating inventory item with data:', JSON.stringify(inventoryItem, null, 2));
-
     const response = await fetch(`https://api.ebay.com/sell/inventory/v1/inventory_item/${itemData.sku}`, {
         method: "PUT",
         headers: this.headers,
         body: JSON.stringify(inventoryItem)
     });
 
-  if (!response.ok) {
-    const errorData = await response.text();
-    console.error('Inventory item creation failed:', response.status, errorData);
-    return {
-      status: response.status,
-      success: false,
-      error: errorData
-    };
-  }
-
-  const responseData = await response.json();
-  console.log('Inventory item created successfully:', responseData);
-
     return {
         status: response.status,
         success: response.ok
     };
 }
+  getCategoryId(): number {
+    return 63;
+  }
 
-  async createOffer(itemData: { price: string; sku: any; categoryId: any; description: any; quantityLimit: any; }, merchantKey: any, policyIds: any[]) {
+  async createOffer(itemData: { price: string; sku: any; description: any; quantityLimit: any; }, merchantKey: any, policyIds: any[]) {
     const price = parseFloat(itemData.price);
     
     const offer = {
@@ -434,7 +420,7 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
       "marketplaceId": "EBAY_US",
       "format": "FIXED_PRICE",
       'currency': "USD",
-      "categoryId": itemData.categoryId,
+      "categoryId": this.getCategoryId(),
       "pricingSummary": {
         "price": {
           "value": price,
@@ -538,7 +524,7 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
       // Create inventory item
       const inventoryResult = await this.createInventoryItem(itemData, merchantKey);
       if (!inventoryResult.success) {
-        throw new Error(`Failed to create inventory item: ${inventoryResult.status} - ${inventoryResult.error || 'Unknown error'}`);
+        throw new Error(`Failed to create inventory item: ${inventoryResult.status}`);
       }
       
       // Create offer
@@ -546,7 +532,6 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
         {
           price: String(itemData.price),
           sku: itemData.sku,
-          categoryId: itemData.categoryId,
           description: itemData.description,
           quantityLimit: itemData.quantityLimit
         },
@@ -572,9 +557,10 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
       };
       
     } catch (error) {
+      console.error('Error in listItem:', error);
       return {
         success: false,
-        error: typeof error === "object" && error !== null && "message" in error ? (error as { message: string }).message : String(error)
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
