@@ -1,21 +1,95 @@
-// src/routes/api/ebay/listing/ebay.ts
 
-// ... (Keep all the interface definitions at the top: ItemDimensions, ItemAspects, etc.)
-
-// Placeholder function for a real image upload service.
-// In a real application, this would upload the buffer to a service like
-// Firebase Storage, AWS S3, or Cloudinary and return the public URL.
-async function uploadImage(imageBuffer: Buffer): Promise<string> {
-  // This is a placeholder. You need to implement a real upload service.
-  // For now, we'll return a placeholder URL to demonstrate the data flow.
-  // NOTE: This will not work in production as the URL is not real.
-  console.log(`[Placeholder] "Uploading" image of size ${imageBuffer.length} bytes...`);
-  return `https://your-image-hosting.com/placeholder_${Date.now()}.jpg`;
+interface ItemDimensions {
+    height?: string | number;
+    length?: string | number;
+    width?: string | number;
+    unit?: string;
 }
+
+interface ItemAspects {
+    [key: string]: string[];
+}
+
+interface ItemData {
+    price: string | number;
+    quantity?: number;
+    condition?: string;
+    dimensions?: ItemDimensions;
+    weight?: string | number;
+    aspects?: ItemAspects;
+    description: string;
+    imageUrls?: string[];
+    title: string;
+    sku: string;
+    categoryId?: string;
+    quantityLimit?: number;
+}
+
+interface InventoryItem {
+    currency: string;
+    availability: {
+        shipToLocationAvailability: {
+            availabilityDistributions: Array<{
+                fulfillmentTime: {
+                    unit: string;
+                    value: number;
+                };
+                merchantLocationKey: string;
+                quantity: number;
+            }>;
+            quantity: number;
+        };
+    };
+    price: {
+        value: number;
+        currency: string;
+    };
+    condition: string;
+    locale: string;
+    packageWeightAndSize: {
+        dimensions: ItemDimensions;
+        packageType: string;
+        shippingIrregular: boolean;
+        weight: {
+            unit: string;
+            value: string | number;
+        };
+    };
+    product: {
+        aspects: ItemAspects;
+        description: string;
+        imageUrls?: string[];
+        title: string;
+    };
+    sku: string;
+}
+
+interface InventoryItemResponse {
+  status: number;
+  success: boolean;
+}
+
+  interface RefreshTokenResponse {
+    access_token: string;
+    [key: string]: any;
+  }
+
+
+
+  interface SearchByImageResponse {
+    status: number;
+    success: boolean;
+    results: ItemSummary[];
+  }
+
+  interface ItemSummary {
+    itemId: string;
+    title: string;
+    [key: string]: any;
+  }
 
 
 class SimplifiedEbayLister {
-  // ... (Keep the constructor and other methods like refreshToken, getMerchantKey, etc., the same)
   access_token: string;
   headers: { [key: string]: string };
 
@@ -127,7 +201,7 @@ class SimplifiedEbayLister {
 
 async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<InventoryItemResponse> {
     const price = parseFloat(itemData.price as string);
-    
+
     const inventoryItem: InventoryItem = {
         currency: "USD",
         availability: {
@@ -197,7 +271,7 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
       "marketplaceId": "EBAY_US",
       "format": "FIXED_PRICE",
       'currency': "USD",
-      "categoryId": "170062",
+      "categoryId": itemData.categoryId,
       "pricingSummary": {
         "price": {
           "value": price,
@@ -267,8 +341,7 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
     };
   }
 
-  // *** MODIFIED FUNCTION ***
-  async listItem(itemData: ItemData, refreshToken: string, authBase: string, username: string | undefined, imageBuffers: Buffer[] | null = null) {
+  async listItem(itemData: ItemData, refreshToken: string, authBase: string, username: undefined, imageInput = null) {
     try {
       // Refresh token
       await this.refreshToken(refreshToken, authBase);
@@ -282,21 +355,29 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
       // Get policies
       const policies = await this.getPolicies();
       
-      // --- START: NEW IMAGE HANDLING LOGIC ---
-      // Upload images and add their URLs to itemData
-      if (imageBuffers && imageBuffers.length > 0) {
-        const imageUrls = await Promise.all(
-          imageBuffers.map(buffer => uploadImage(buffer))
-        );
-        itemData.imageUrls = imageUrls;
-      }
-      // --- END: NEW IMAGE HANDLING LOGIC ---
+      // Process image if provided
+      // let processedImageUrl = null;
+      // if (imageInput) {
+      //   const imageResult = await this.processImage(imageInput, username, itemData.title);
+      //   if (imageResult.success) {
+      //     processedImageUrl = imageResult.imageUrl;
+      //     // Add to imageUrls if not already present
+      //     if (!itemData.imageUrls) {
+      //       itemData.imageUrls = [];
+      //     }
+      //     if (!itemData.imageUrls.includes(processedImageUrl)) {
+      //       itemData.imageUrls.unshift(processedImageUrl); // Add as first image
+      //     }
+      //   } else {
+      //     console.warn('Image processing failed:', imageResult.error);
+      //     // Continue without the image rather than failing entirely
+      //   }
+      // }
       
       // Create inventory item
       const inventoryResult = await this.createInventoryItem(itemData, merchantKey);
       if (!inventoryResult.success) {
-        // Provide a more detailed error message
-        throw new Error(`Failed to create inventory item. Status: ${inventoryResult.status}`);
+        throw new Error(`Failed to create inventory item: ${inventoryResult.status}`);
       }
       
       // Create offer
@@ -304,7 +385,7 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
         {
           price: String(itemData.price),
           sku: itemData.sku,
-          categoryId: itemData.categoryId, // Ensure categoryId is passed
+          categoryId: itemData.categoryId,
           description: itemData.description,
           quantityLimit: itemData.quantityLimit
         },
@@ -325,13 +406,14 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
         success: true,
         listingId: publishResult.listingId,
         offerId: offerResult.offerId,
+        // processedImageUrl: processedImageUrl,
         message: "Item listed successfully"
       };
       
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: typeof error === "object" && error !== null && "message" in error ? (error as { message: string }).message : String(error)
       };
     }
   }
