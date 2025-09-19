@@ -59,18 +59,18 @@ export const POST: RequestHandler = async ({ request }) => {
 
         // Optional: Search by image first to check for similar items
         // For simplicity, using the first image for search. Adapt if searchByImage can handle multiple.
-        let searchResults = null;
-        if (base64Images.length > 0) {
-            try {
-                const searchResponse = await ebayLister.searchByImage(base64Images[0]);
-                if (searchResponse.success) {
-                    searchResults = searchResponse.results;
-                }
-            } catch (error) {
-                console.warn('Image search failed:', error instanceof Error ? error.message : String(error));
-                // Continue with listing even if image search fails
-            }
-        }
+        // let searchResults = null;
+        // if (base64Images.length > 0) {
+        //     try {
+        //         const searchResponse = await ebayLister.searchByImage(base64Images[0]);
+        //         if (searchResponse.success) {
+        //             searchResults = searchResponse.results;
+        //         }
+        //     } catch (error) {
+        //         console.warn('Image search failed:', error instanceof Error ? error.message : String(error));
+        //         // Continue with listing even if image search fails
+        //     }
+        // }
 
         // List the item
         // Pass the array of image buffers to listItem

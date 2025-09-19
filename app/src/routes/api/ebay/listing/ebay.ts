@@ -122,36 +122,15 @@ class SimplifiedEbayLister {
       body: formData
     });
 
+    if (!response.ok) {
+      throw new Error(`Token refresh failed: ${response.status} - ${response.statusText}`);
+    }
+
     const body: RefreshTokenResponse = await response.json();
     this.access_token = body.access_token;
     this.headers["Authorization"] = `Bearer ${this.access_token}`;
+    console.log('OAuth token refreshed successfully');
     return this.access_token;
-  }
-
-  // Method to exchange OAuth token for Auth'n'Auth token (for XML API)
-  async getAuthNAuthToken(oauthToken: string): Promise<string> {
-    try {
-      const response = await fetch('https://api.ebay.com/identity/v1/oauth2/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Bearer ${oauthToken}`
-        },
-        body: 'grant_type=client_credentials'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return data.access_token;
-      } else {
-        // If we can't get a proper Auth'n'Auth token, use the OAuth token
-        console.warn('Could not get Auth\'n\'Auth token, using OAuth token');
-        return oauthToken;
-      }
-    } catch (error) {
-      console.warn('Error getting Auth\'n\'Auth token, using OAuth token:', error);
-      return oauthToken;
-    }
   }
 
   async getMerchantKey() {
@@ -224,14 +203,14 @@ class SimplifiedEbayLister {
     return policies;
   }
 
-  // Method to upload image to eBay using XML Trading API (EPS)
-  async uploadImageToEbay(imageBuffer: Buffer, authToken: string): Promise<ImageUploadResponse> {
+  // Method to upload image to eBay using XML Trading API with OAuth token
+  async uploadImageToEbay(imageBuffer: Buffer, oauthToken: string): Promise<ImageUploadResponse> {
     try {
-      // Create XML request for UploadSiteHostedPictures
+      // Create XML request for UploadSiteHostedPictures using OAuth token
       const xmlPayload = `<?xml version="1.0" encoding="utf-8"?>
 <UploadSiteHostedPicturesRequest xmlns="urn:ebay:apis:eBLBaseComponents">
     <RequesterCredentials>
-        <eBayAuthToken>${authToken}</eBayAuthToken>
+        <eBayAuthToken>${oauthToken}</eBayAuthToken>
     </RequesterCredentials>
     <PictureSet>Supersize</PictureSet>
     <PictureData contentType="image/jpeg"></PictureData>
@@ -336,16 +315,16 @@ class SimplifiedEbayLister {
     }
   }
 
-  // New method to process multiple images with fallback
-  async processImages(imageBuffers: Buffer[], username: string, sku: string, authToken: string): Promise<string[]> {
+  // Process multiple images with fallback - now uses OAuth token directly
+  async processImages(imageBuffers: Buffer[], username: string, sku: string): Promise<string[]> {
     const imageUrls: string[] = [];
 
     for (let i = 0; i < imageBuffers.length; i++) {
       const buffer = imageBuffers[i];
       console.log(`Processing image ${i + 1}/${imageBuffers.length}`);
 
-      // Try eBay Picture Services (EPS) first using XML Trading API
-      let uploadResult = await this.uploadImageToEbay(buffer, authToken);
+      // Try eBay Picture Services (EPS) first using OAuth token
+      let uploadResult = await this.uploadImageToEbay(buffer, this.access_token);
 
       if (!uploadResult.success) {
         console.warn(`eBay EPS upload failed for image ${i + 1}: ${uploadResult.error}`);
@@ -509,11 +488,9 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
 
   async listItem(itemData: ItemData, refreshToken: string, authBase: string, username: string, imageBuffers: Buffer[] = []) {
     try {
-      // Refresh token
+      // Refresh token FIRST - this sets this.access_token and updates headers
+      console.log('Refreshing OAuth token...');
       await this.refreshToken(refreshToken, authBase);
-      
-      // Get Auth'n'Auth token for XML API image uploads
-      const authToken = await this.getAuthNAuthToken(this.access_token);
 
       // Get or create merchant key
       let merchantKey = await this.getMerchantKey();
@@ -524,10 +501,10 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
       // Get policies
       const policies = await this.getPolicies();
       
-      // Process images if provided
+      // Process images if provided - now uses the refreshed OAuth token
       if (imageBuffers && imageBuffers.length > 0) {
         console.log(`Processing ${imageBuffers.length} images...`);
-        const uploadedImageUrls = await this.processImages(imageBuffers, username, itemData.sku, authToken);
+        const uploadedImageUrls = await this.processImages(imageBuffers, username, itemData.sku);
 
         if (uploadedImageUrls.length > 0) {
           // Add uploaded images to itemData
