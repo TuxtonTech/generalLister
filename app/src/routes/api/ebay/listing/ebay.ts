@@ -420,14 +420,14 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
         body: JSON.stringify(inventoryItem)
     });
 
-  const responseData = await response.json();
-  if (!response.ok) {
-    console.log(responseData);
-  }
+  // const responseData = await response.json();
+  // if (!response.ok) {
+  //   console.log(responseData);
+  // }
     return {
         status: response.status,
       success: response.ok,
-      data: responseData
+      // data: responseData
     };
 }
   getCategoryId(): number {
