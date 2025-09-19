@@ -111,6 +111,7 @@ class SimplifiedEbayLister {
     const formData = new URLSearchParams();
     formData.append('grant_type', 'refresh_token');
     formData.append('refresh_token', refreshToken);
+    formData.append('scope', 'https://api.ebay.com/oauth/api_scope https://api.ebay.com/oauth/api_scope/sell.marketing.readonly https://api.ebay.com/oauth/api_scope/sell.marketing https://api.ebay.com/oauth/api_scope/sell.inventory.readonly https://api.ebay.com/oauth/api_scope/sell.inventory https://api.ebay.com/oauth/api_scope/sell.account.readonly https://api.ebay.com/oauth/api_scope/sell.account https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly https://api.ebay.com/oauth/api_scope/sell.fulfillment https://api.ebay.com/oauth/api_scope/sell.analytics.readonly https://api.ebay.com/oauth/api_scope/sell.finances https://api.ebay.com/oauth/api_scope/sell.payment.dispute https://api.ebay.com/oauth/api_scope/commerce.identity.readonly');
 
     const response: Response = await fetch('https://api.ebay.com/identity/v1/oauth2/token', {
       method: 'POST',
@@ -125,6 +126,32 @@ class SimplifiedEbayLister {
     this.access_token = body.access_token;
     this.headers["Authorization"] = `Bearer ${this.access_token}`;
     return this.access_token;
+  }
+
+  // Method to exchange OAuth token for Auth'n'Auth token (for XML API)
+  async getAuthNAuthToken(oauthToken: string): Promise<string> {
+    try {
+      const response = await fetch('https://api.ebay.com/identity/v1/oauth2/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Bearer ${oauthToken}`
+        },
+        body: 'grant_type=client_credentials'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.access_token;
+      } else {
+        // If we can't get a proper Auth'n'Auth token, use the OAuth token
+        console.warn('Could not get Auth\'n\'Auth token, using OAuth token');
+        return oauthToken;
+      }
+    } catch (error) {
+      console.warn('Error getting Auth\'n\'Auth token, using OAuth token:', error);
+      return oauthToken;
+    }
   }
 
   async getMerchantKey() {
@@ -197,37 +224,72 @@ class SimplifiedEbayLister {
     return policies;
   }
 
-  // New method to upload image to eBay using Picture Services (EPS)
-  async uploadImageToEbay(imageBuffer: Buffer, sku: String): Promise<ImageUploadResponse> {
+  // Method to upload image to eBay using XML Trading API (EPS)
+  async uploadImageToEbay(imageBuffer: Buffer, authToken: string): Promise<ImageUploadResponse> {
     try {
-      // Convert buffer to base64
-      const base64Image = imageBuffer.toString('base64');
+      // Create XML request for UploadSiteHostedPictures
+      const xmlPayload = `<?xml version="1.0" encoding="utf-8"?>
+<UploadSiteHostedPicturesRequest xmlns="urn:ebay:apis:eBLBaseComponents">
+    <RequesterCredentials>
+        <eBayAuthToken>${authToken}</eBayAuthToken>
+    </RequesterCredentials>
+    <PictureSet>Supersize</PictureSet>
+    <PictureData contentType="image/jpeg"></PictureData>
+</UploadSiteHostedPicturesRequest>`;
 
-      const requestBody = {
-        image: base64Image
-      };
+      // Create multipart form data
+      const boundary = '----FormBoundary' + Math.random().toString(36).substr(2);
 
-      const response = await fetch('https://api.ebay.com/sell/inventory/v1/picture', {
+      let body = '';
+      body += `--${boundary}\r\n`;
+      body += `Content-Disposition: form-data; name="XML Payload"\r\n\r\n`;
+      body += xmlPayload;
+      body += `\r\n--${boundary}\r\n`;
+      body += `Content-Disposition: form-data; name="image"; filename="image.jpg"\r\n`;
+      body += `Content-Type: image/jpeg\r\n\r\n`;
+
+      // Convert body to buffer and append image data
+      const bodyBuffer = Buffer.concat([
+        Buffer.from(body, 'utf8'),
+        imageBuffer,
+        Buffer.from(`\r\n--${boundary}--\r\n`, 'utf8')
+      ]);
+
+      const response = await fetch('https://api.ebay.com/ws/api.dll', {
         method: 'POST',
         headers: {
-          'Authorization': this.headers.Authorization,
-          'Content-Type': 'application/json',
-          'Content-Language': 'en-US'
+          'X-EBAY-API-CALL-NAME': 'UploadSiteHostedPictures',
+          'X-EBAY-API-SITEID': '0',
+          'X-EBAY-API-RESPONSE-ENCODING': 'XML',
+          'X-EBAY-API-COMPATIBILITY-LEVEL': '967',
+          'X-EBAY-API-DETAIL-LEVEL': '0',
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+          'Content-Length': bodyBuffer.length.toString()
         },
-        body: JSON.stringify(requestBody)
+        body: bodyBuffer
       });
 
       if (response.ok) {
-        const data = await response.json();
-        return {
-          success: true,
-          imageUrl: data.pictureUrl
-        };
+        const xmlText = await response.text();
+
+        // Parse XML response to get the FullURL
+        const fullUrlMatch = xmlText.match(/<FullURL>(.*?)<\/FullURL>/);
+        if (fullUrlMatch && fullUrlMatch[1]) {
+          return {
+            success: true,
+            imageUrl: fullUrlMatch[1]
+          };
+        } else {
+          return {
+            success: false,
+            error: `eBay EPS upload failed: Could not parse FullURL from response`
+          };
+        }
       } else {
-        const errorData = await response.json();
+        const errorText = await response.text();
         return {
           success: false,
-          error: `eBay EPS upload failed: ${response.status} - ${JSON.stringify(errorData)}`
+          error: `eBay EPS upload failed: ${response.status} - ${errorText}`
         };
       }
     } catch (error) {
@@ -275,15 +337,15 @@ class SimplifiedEbayLister {
   }
 
   // New method to process multiple images with fallback
-  async processImages(imageBuffers: Buffer[], username: string, sku: string): Promise<string[]> {
+  async processImages(imageBuffers: Buffer[], username: string, sku: string, authToken: string): Promise<string[]> {
     const imageUrls: string[] = [];
 
     for (let i = 0; i < imageBuffers.length; i++) {
       const buffer = imageBuffers[i];
       console.log(`Processing image ${i + 1}/${imageBuffers.length}`);
 
-      // Try eBay Picture Services (EPS) first
-      let uploadResult = await this.uploadImageToEbay(buffer, sku);
+      // Try eBay Picture Services (EPS) first using XML Trading API
+      let uploadResult = await this.uploadImageToEbay(buffer, authToken);
 
       if (!uploadResult.success) {
         console.warn(`eBay EPS upload failed for image ${i + 1}: ${uploadResult.error}`);
@@ -450,6 +512,9 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
       // Refresh token
       await this.refreshToken(refreshToken, authBase);
       
+      // Get Auth'n'Auth token for XML API image uploads
+      const authToken = await this.getAuthNAuthToken(this.access_token);
+
       // Get or create merchant key
       let merchantKey = await this.getMerchantKey();
       if (!merchantKey) {
@@ -462,7 +527,7 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
       // Process images if provided
       if (imageBuffers && imageBuffers.length > 0) {
         console.log(`Processing ${imageBuffers.length} images...`);
-        const uploadedImageUrls = await this.processImages(imageBuffers, username, itemData.sku);
+        const uploadedImageUrls = await this.processImages(imageBuffers, username, itemData.sku, authToken);
 
         if (uploadedImageUrls.length > 0) {
           // Add uploaded images to itemData
