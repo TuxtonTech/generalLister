@@ -1,4 +1,3 @@
-
 interface ItemDimensions {
     height?: string | number;
     length?: string | number;
@@ -69,25 +68,28 @@ interface InventoryItemResponse {
   success: boolean;
 }
 
-  interface RefreshTokenResponse {
+interface RefreshTokenResponse {
     access_token: string;
     [key: string]: any;
-  }
+}
 
-
-
-  interface SearchByImageResponse {
+interface SearchByImageResponse {
     status: number;
     success: boolean;
     results: ItemSummary[];
-  }
+}
 
-  interface ItemSummary {
+interface ItemSummary {
     itemId: string;
     title: string;
     [key: string]: any;
-  }
+}
 
+interface ImageUploadResponse {
+  success: boolean;
+  imageUrl?: string;
+  error?: string;
+}
 
 class SimplifiedEbayLister {
   access_token: string;
@@ -101,9 +103,6 @@ class SimplifiedEbayLister {
       "Content-Language": "en-US"
     };
   }
-
-
-
 
   async refreshToken(
     refreshToken: string,
@@ -198,6 +197,113 @@ class SimplifiedEbayLister {
     return policies;
   }
 
+  // New method to upload image to eBay using Picture Services (EPS)
+  async uploadImageToEbay(imageBuffer: Buffer): Promise<ImageUploadResponse> {
+    try {
+      // Convert buffer to base64
+      const base64Image = imageBuffer.toString('base64');
+
+      const requestBody = {
+        image: base64Image
+      };
+
+      const response = await fetch('https://api.ebay.com/sell/inventory/v1/picture', {
+        method: 'POST',
+        headers: {
+          'Authorization': this.headers.Authorization,
+          'Content-Type': 'application/json',
+          'Content-Language': 'en-US'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          success: true,
+          imageUrl: data.pictureUrl
+        };
+      } else {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: `eBay EPS upload failed: ${response.status} - ${JSON.stringify(errorData)}`
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: `eBay EPS upload error: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
+  }
+
+  // Fallback method to upload to your server
+  async uploadToServer(imgBuffer: Buffer, username: string, sku: string): Promise<ImageUploadResponse> {
+    try {
+      const formData = new FormData();
+      const blob = new Blob([imgBuffer], { type: 'image/jpeg' });
+      formData.append('image', blob, `${sku}.jpg`);
+      formData.append('username', username);
+      formData.append('sku', sku);
+
+      // Replace with your actual server upload endpoint
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          success: true,
+          imageUrl: data.imageUrl
+        };
+      } else {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: `Server upload failed: ${JSON.stringify(errorData)}`
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: `Server upload error: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
+  }
+
+  // New method to process multiple images with fallback
+  async processImages(imageBuffers: Buffer[], username: string, sku: string): Promise<string[]> {
+    const imageUrls: string[] = [];
+
+    for (let i = 0; i < imageBuffers.length; i++) {
+      const buffer = imageBuffers[i];
+      console.log(`Processing image ${i + 1}/${imageBuffers.length}`);
+
+      // Try eBay Picture Services (EPS) first
+      let uploadResult = await this.uploadImageToEbay(buffer);
+
+      if (!uploadResult.success) {
+        console.warn(`eBay EPS upload failed for image ${i + 1}: ${uploadResult.error}`);
+        console.log('Trying server upload as fallback...');
+
+        // Fallback to server upload
+        uploadResult = await this.uploadToServer(buffer, username, sku);
+      }
+
+      if (uploadResult.success && uploadResult.imageUrl) {
+        imageUrls.push(uploadResult.imageUrl);
+        console.log(`Successfully uploaded image ${i + 1}: ${uploadResult.imageUrl}`);
+      } else {
+        console.error(`Failed to upload image ${i + 1}: ${uploadResult.error}`);
+        // Continue with other images even if one fails
+      }
+    }
+
+    return imageUrls;
+  }
 
 async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<InventoryItemResponse> {
     const price = parseFloat(itemData.price as string);
@@ -324,8 +430,6 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
     };
   }
 
-
-
   async searchByImage(base64Image: string): Promise<SearchByImageResponse> {
     const response: Response = await fetch(`https://api.ebay.com/buy/browse/v1/item_summary/search_by_image`, {
       method: "POST",
@@ -341,7 +445,7 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
     };
   }
 
-  async listItem(itemData: ItemData, refreshToken: string, authBase: string, username: undefined, imageInput = null) {
+  async listItem(itemData: ItemData, refreshToken: string, authBase: string, username: string, imageBuffers: Buffer[] = []) {
     try {
       // Refresh token
       await this.refreshToken(refreshToken, authBase);
@@ -355,24 +459,23 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
       // Get policies
       const policies = await this.getPolicies();
       
-      // Process image if provided
-      // let processedImageUrl = null;
-      // if (imageInput) {
-      //   const imageResult = await this.processImage(imageInput, username, itemData.title);
-      //   if (imageResult.success) {
-      //     processedImageUrl = imageResult.imageUrl;
-      //     // Add to imageUrls if not already present
-      //     if (!itemData.imageUrls) {
-      //       itemData.imageUrls = [];
-      //     }
-      //     if (!itemData.imageUrls.includes(processedImageUrl)) {
-      //       itemData.imageUrls.unshift(processedImageUrl); // Add as first image
-      //     }
-      //   } else {
-      //     console.warn('Image processing failed:', imageResult.error);
-      //     // Continue without the image rather than failing entirely
-      //   }
-      // }
+      // Process images if provided
+      if (imageBuffers && imageBuffers.length > 0) {
+        console.log(`Processing ${imageBuffers.length} images...`);
+        const uploadedImageUrls = await this.processImages(imageBuffers, username, itemData.sku);
+
+        if (uploadedImageUrls.length > 0) {
+          // Add uploaded images to itemData
+          if (!itemData.imageUrls) {
+            itemData.imageUrls = [];
+          }
+          // Prepend new images to existing ones
+          itemData.imageUrls = [...uploadedImageUrls, ...itemData.imageUrls];
+          console.log(`Successfully processed ${uploadedImageUrls.length} images`);
+        } else {
+          console.warn('No images were successfully uploaded');
+        }
+      }
       
       // Create inventory item
       const inventoryResult = await this.createInventoryItem(itemData, merchantKey);
@@ -406,7 +509,7 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
         success: true,
         listingId: publishResult.listingId,
         offerId: offerResult.offerId,
-        // processedImageUrl: processedImageUrl,
+        uploadedImages: itemData.imageUrls?.length || 0,
         message: "Item listed successfully"
       };
       
