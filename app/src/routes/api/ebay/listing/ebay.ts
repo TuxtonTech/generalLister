@@ -65,6 +65,7 @@ interface InventoryItem {
 interface InventoryItemResponse {
   status: number;
   success: boolean;
+  data?: any;
 }
 
 interface RefreshTokenResponse {
@@ -122,7 +123,9 @@ class SimplifiedEbayLister {
     });
 
     if (!response.ok) {
-      throw new Error(`Token refresh failed: ${response.status} - ${response.statusText}`);
+      const error = await response.json();
+      console.error('Token refresh error:', error);
+      throw new Error(`Token refresh failed: ${response.status} - ${JSON.stringify(error)}`);
     }
 
     const body: RefreshTokenResponse = await response.json();
@@ -136,8 +139,10 @@ class SimplifiedEbayLister {
     const response = await fetch(`https://api.ebay.com/sell/inventory/v1/location/`, {
       headers: this.headers
     });
-
     const data = await response.json();
+    if (!response.ok) {
+      console.error('Get merchant key error:', data);
+    }
     if (data.total && data.locations.length > 0) {
       return data.locations[0].merchantLocationKey;
     }
@@ -162,11 +167,15 @@ class SimplifiedEbayLister {
       phone: phone,
     };
 
-    await fetch(`https://api.ebay.com/sell/inventory/v1/location/${key}`, {
+    const response = await fetch(`https://api.ebay.com/sell/inventory/v1/location/${key}`, {
       method: "POST",
       headers: this.headers,
       body: JSON.stringify(body)
     });
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Create merchant key error:', error);
+    }
 
     return key;
   }
@@ -184,6 +193,7 @@ class SimplifiedEbayLister {
       const resBody = await response.json();
 
       if (resBody.errors) {
+        console.error(`Get policies error for ${name}:`, resBody.errors);
         throw new Error(`No ${name} policies found. Please create business policies.`);
       }
 
@@ -258,6 +268,7 @@ class SimplifiedEbayLister {
             imageUrl: fullUrlMatch[1]
           };
         } else {
+          console.error('eBay EPS upload error: Could not parse FullURL', xmlText);
           return {
             success: false,
             error: `eBay EPS upload failed: Could not parse FullURL from response`
@@ -265,12 +276,14 @@ class SimplifiedEbayLister {
         }
       } else {
         const errorText = await response.text();
+        console.error('eBay EPS upload error:', errorText);
         return {
           success: false,
           error: `eBay EPS upload failed: ${response.status} - ${errorText}`
         };
       }
     } catch (error) {
+      console.error('eBay EPS upload exception:', error);
       return {
         success: false,
         error: `eBay EPS upload error: ${error instanceof Error ? error.message : String(error)}`
@@ -301,12 +314,14 @@ class SimplifiedEbayLister {
         };
       } else {
         const errorData = await response.json();
+        console.error('Server upload error:', errorData);
         return {
           success: false,
           error: `Server upload failed: ${JSON.stringify(errorData)}`
         };
       }
     } catch (error) {
+      console.error('Server upload exception:', error);
       return {
         success: false,
         error: `Server upload error: ${error instanceof Error ? error.message : String(error)}`
@@ -403,9 +418,14 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
         body: JSON.stringify(inventoryItem)
     });
 
+  const responseData = await response.json();
+  if (!response.ok) {
+    console.log(responseData);
+  }
     return {
         status: response.status,
-        success: response.ok
+      success: response.ok,
+      data: responseData
     };
 }
   getCategoryId(): number {
@@ -448,6 +468,9 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
     });
 
     const responseData = await response.json();
+    if (!response.ok) {
+      console.log(responseData);
+    }
     
     return {
       status: response.status,
@@ -464,6 +487,9 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
     });
 
     const data = await response.json();
+    if (!response.ok) {
+      console.log(data);
+    }
     
     return {
       status: response.status,
@@ -481,6 +507,9 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
     });
 
     const data: { itemSummaries?: ItemSummary[] } = await response.json();
+    if (!response.ok) {
+      console.log(data);
+    }
     return {
       status: response.status,
       success: response.ok,
