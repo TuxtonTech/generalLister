@@ -403,6 +403,8 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
         body: JSON.stringify(inventoryItem)
     });
 
+  console.log(await response.json())
+
     return {
         status: response.status,
         success: response.ok
