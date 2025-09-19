@@ -1,4 +1,3 @@
-<!-- detailsModal.svelte -->
 <script lang="ts">
 	import { accountsStore } from "$lib/store/app/accounts/accounts";
 	import { imageUrls } from "$lib/store/app/helpers/detailsPage";
@@ -12,7 +11,6 @@
     let price: number | null = null;
     let quantity: number | null = null;
     let description: string = '';
-
     // Listing Aspects logic:
     let aspectInput: string = '';
     let listingAspects: string[] = [];
@@ -26,7 +24,6 @@
     accountsStore.subscribe(value => {
         accounts = value;
     });
-
     $: {
 
     }
@@ -35,7 +32,6 @@
     if (!blobUrl) return;
     const response = await fetch(blobUrl);
     const blob = await response.blob();
-    
     // This gives you binary data as ArrayBuffer
     return blob
 }   
@@ -49,7 +45,6 @@ async function formatData(blobUrl: string, username: string, password: string) {
     formData.append('image', blob);
     formData.append('username', username);
     formData.append('password', password);
-    
     return formData
 }
 
@@ -57,7 +52,6 @@ async function formatData(blobUrl: string, username: string, password: string) {
         if (!blobUrl) return;
         const response = await fetch(blobUrl);
         const blob = await response.blob();
-        
         return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -92,13 +86,12 @@ async function formatData(blobUrl: string, username: string, password: string) {
 
         // Set default quantity
         if (!quantity) quantity = 1;
-
         // Generate description from available data
         let autoDescription = '';
         if (data.publisher) autoDescription += `Publisher: ${data.publisher}\n`;
         if (data.title) autoDescription += `Series: ${data.title}\n`;
         if (data.variant_name) autoDescription += `Variant: ${data.variant_name}\n`;
-       if (data.fmv) {
+        if (data.fmv) {
     if (data.fmv.raw && Object.keys(data.fmv.raw).length > 0) {
         const rawPrices = Object.entries(data.fmv.raw)
             .map(([condition, price]) => `${condition}: ${price}`)
@@ -120,13 +113,11 @@ async function formatData(blobUrl: string, username: string, password: string) {
             autoDescription += `Recent Sales Available: ${data.fmv.length} sales found\n`;
         }
         description = autoDescription.trim();
-
         // Auto-add relevant aspects/tags
         const autoAspects = [];
         if (data.publisher) autoAspects.push(data.publisher);
         if (data.variant_name) autoAspects.push(data.variant_name);
         if (data.sold?.graded && parseFloat(data.sold.graded) > 0) autoAspects.push('Graded');
-        
         // Add aspects that aren't already in the list
         autoAspects.forEach(aspect => {
             if (!listingAspects.includes(aspect)) {
@@ -160,11 +151,9 @@ async function processBatchImages() {
         }
 
         const formData = new FormData();
-        
         // Convert each URL to blob and add to FormData
         for (let i = 0; i < $imageUrls.length; i++) {
             const url = $imageUrls[i];
-            
             // Fetch the image as blob
             const response = await fetch(url);
             const blob = await response.blob();
@@ -175,13 +164,11 @@ async function processBatchImages() {
         
         formData.append('format', 'base64');
         formData.append('include_info', 'true');
-
         // Send to your batch endpoint
         const result = await fetch('/api/batch_image_formatting', {
             method: 'POST',
             body: formData
         });
-        
         const data = await result.json();
         console.log('Batch processing result:', data);
         
@@ -203,7 +190,7 @@ async function processBatchImages() {
                     isLoadingFMV = true;
                     fmvData = null;
                
-                    // Convert blob URL to base64
+                    // Convert 
                     const account = $accountsStore.find(account => account.type === 'covr');
                     if (!account) {
                         alert('Please add a Covr account in the Accounts Section to enable FMV lookup.');
@@ -222,8 +209,6 @@ async function processBatchImages() {
                         method: 'POST',
                         body: imageFormData
                     });
-
-                    
                     if (r.ok) {
                         const data = await r.json();
                         console.log('FMV API Response:', data);
@@ -232,7 +217,6 @@ async function processBatchImages() {
 
                         // Auto-fill the form with the returned data
                         fillFormFromFMVData(data);
-
                     } else {
 
                         // console.error('FMV API error:', result.status, result.statusText);
@@ -269,7 +253,6 @@ async function processBatchImages() {
         // { name: 'Facebook', selected: false },
         // { name: 'Etsy', selected: false },
     ];
-
     // Add this line with your other reactive variables at the top of the <script>
 
 
@@ -290,25 +273,34 @@ async function handleSubmit() {
         return;
     }
 
+    // 4. Format the aspects correctly
+    const formattedAspects: { [key: string]: string[] } = {};
+    if (listingAspects.length > 0) {
+        // Assume the first aspect is the Brand
+        formattedAspects['Brand'] = [listingAspects[0]];
+        // Group the rest under Features
+        if (listingAspects.length > 1) {
+            formattedAspects['Features'] = listingAspects.slice(1);
+        }
+    }
+
     const itemData = {
         sku: "UNIQUE-SKU-" + Date.now(), // Generate a unique SKU for each listing
         title,
         price,
         quantity,
         description,
-        aspects: listingAspects,
+        aspects: formattedAspects, // Use the new formatted object
         marketplaces: marketplaces.filter(m => m.selected).map(m => m.name),
         fmvData: fmvData
     };
-
     const formData = new FormData();
 
-    // 4. Use the dynamic credentials from the store
+    // 5. Use the dynamic credentials from the store
     formData.append('refresh_token', ebayAccount.refresh_token);
     formData.append('username', ebayAccount.name); // Using the account name as the username
     formData.append('item_data', JSON.stringify(itemData));
-
-    // 5. Fetch each image URL, convert it to a Blob, and append it
+    // 6. Fetch each image URL, convert it to a Blob, and append it
     for (const imageUrl of $imageUrls) {
         if (imageUrl) {
             try {
@@ -323,14 +315,13 @@ async function handleSubmit() {
         }
     }
 
-    // 6. Send the request
+    // 7. Send the request
     try {
         const res = await fetch('/api/ebay/listing', {
             method: 'POST',
             body: formData
-            // No 'Content-Type' header needed; the browser sets it for FormData
+            // No 'Content-Type' header needed; 
         });
-
         if (res.ok) {
             const result = await res.json();
             console.log('Listing successful:', result);
@@ -353,7 +344,6 @@ async function handleSubmit() {
         }
     }
 </script>
-
 <div class="quadrant-container">
     
     <!-- Top Left: Basic Info -->
