@@ -66,6 +66,7 @@ interface InventoryItem {
 interface InventoryItemResponse {
   status: number;
   success: boolean;
+  error?: string;
 }
 
 interface RefreshTokenResponse {
@@ -398,11 +399,26 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
         sku: itemData.sku
     };
 
+  console.log('Creating inventory item with data:', JSON.stringify(inventoryItem, null, 2));
+
     const response = await fetch(`https://api.ebay.com/sell/inventory/v1/inventory_item/${itemData.sku}`, {
         method: "PUT",
         headers: this.headers,
         body: JSON.stringify(inventoryItem)
     });
+
+  if (!response.ok) {
+    const errorData = await response.text();
+    console.error('Inventory item creation failed:', response.status, errorData);
+    return {
+      status: response.status,
+      success: false,
+      error: errorData
+    };
+  }
+
+  const responseData = await response.json();
+  console.log('Inventory item created successfully:', responseData);
 
     return {
         status: response.status,
@@ -522,7 +538,7 @@ async createInventoryItem(itemData: ItemData, merchantKey: string): Promise<Inve
       // Create inventory item
       const inventoryResult = await this.createInventoryItem(itemData, merchantKey);
       if (!inventoryResult.success) {
-        throw new Error(`Failed to create inventory item: ${inventoryResult.status}`);
+        throw new Error(`Failed to create inventory item: ${inventoryResult.status} - ${inventoryResult.error || 'Unknown error'}`);
       }
       
       // Create offer
