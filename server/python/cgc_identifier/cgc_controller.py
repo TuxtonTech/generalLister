@@ -39,7 +39,7 @@ class GrabcgcGrading:
                     primary_value = parts[0].strip()
 
                     # The second part (if it exists) is the secondary detail
-                    secondary_detail = parts[1].strip() if len(parts) > 1 else None
+                    secondary_detail = parts[1].strip() if len(parts) > 1 else ""
 
                     # Store the cleaned data in the new dictionary
                     if key == 'cgc_grade':
