@@ -96,9 +96,15 @@ async function formatData(blobUrl: string, username: string, password: string) {
                 autoDescription += `Grade: ${data.grade} \n`
                 autoDescription += `Issue: ${data.comic_issue} \n`
                 const gradedPrices = Object.entries(data.fmv.graded)
+                let min, max;
+
                 for(let [key, value] of gradedPrices) {
                     if(key == data.grade) {
                         price = parseFloat(value + "")
+                    } else if(+key > data.grade - 2 && !min) {
+                        min = key
+                    } else if (+key < data.grade + 2 && !max) {
+                        max = key
                     }
                 }
                 const desc = gradedPrices.map(([grade, price]) => `${grade}: ${price}`)
