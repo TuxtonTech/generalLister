@@ -33,7 +33,7 @@ class GrabcgcGrading:
                 # Get the key (e.g., 'cgc_grade') and the full string value
                 for key, value in item.items():
                     # Split the string by the double newline to separate main info from details
-                    parts = value.split('\n\n')
+                    parts = value.split('\n')
 
                     # The first part is the primary value
                     primary_value = parts[0].strip()
