@@ -95,24 +95,49 @@ async function formatData(blobUrl: string, username: string, password: string) {
             if(data.grade && data.fmv.graded && Object.keys(data.fmv.graded).length > 0) {
                 autoDescription += `Grade: ${data.grade} \n`
                 autoDescription += `Issue: ${data.comic_issue} \n`
-                const gradedPrices = Object.entries(data.fmv.graded)
-                let min: any, max: any, averagePrice: number = 0;
-
-                for(let [key, value] of gradedPrices) {
-                    if(key == data.grade) {
-                        price = parseFloat(value + "")
-                    } else if(+key > data.grade - 2 && !min) {
-                        min = key + ""
-                    } else if (+key < data.grade + 2 && !max) {
-                        max = key + ""
+                let gradedPrices = Object.entries(data.fmv.graded);
+                let lowerGrade = null, upperGrade = null;
+                let lowerPrice = null, upperPrice = null;
+                            
+                // Sort by grade in ascending order for easier processing
+                gradedPrices = gradedPrices.sort((a, b) => +a[0] - +b[0]);
+                            
+                for (let [key, value] of gradedPrices) {
+                    const grade = +key;
+                    
+                    // Check for exact match first
+                    if (grade === data.grade) {
+                        price = parseFloat(value + "");
+                        break;
+                    }
+                    
+                    // Find the closest lower grade
+                    if (grade < data.grade) {
+                        lowerGrade = grade;
+                        lowerPrice = parseFloat(value + "");
+                    }
+                    
+                    // Find the closest upper grade
+                    if (grade > data.grade && upperGrade === null) {
+                        upperGrade = grade;
+                        upperPrice = parseFloat(value + "");
                     }
                 }
-
-                if(min && max) {
-                    const minPrice = gradedPrices[min]
-                    const maxPrice = gradedPrices[max]
-                    averagePrice = (minPrice + maxPrice)/2
+                
+                // If no exact match found, interpolate between closest grades
+                if (price === undefined && lowerPrice !== null && upperPrice !== null) {
+                    const averagePrice = (lowerPrice + upperPrice) / 2;
+                    price = Math.round(averagePrice * 100) / 100;
+                    console.log(`Interpolating between grade ${lowerGrade} ($${lowerPrice}) and grade ${upperGrade} ($${upperPrice})`);
+                    console.log(`Average price: $${averagePrice}, Final price: $${price}`);
                 }
+                
+                // If only one bound is available, you might want to use that price or handle differently
+                else if (price === undefined && (lowerPrice !== null || upperPrice !== null)) {
+                    price = lowerPrice || upperPrice;
+                    console.log(`Using ${lowerPrice ? 'lower' : 'upper'} bound price: $${price}`);
+                }
+
                 const desc = gradedPrices.map(([grade, price]) => `${grade}: ${price}`)
                 .join(', ');
                 autoDescription += `Graded FMV: ${desc}\n`;
