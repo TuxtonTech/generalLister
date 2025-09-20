@@ -8,7 +8,8 @@ module.exports = {
     env: {
       NODE_ENV: 'production',
       PORT: 3000,
-      HOST: '0.0.0.0'
+      HOST: '0.0.0.0',
+      "BODY_SIZE_LIMIT": "52428800"
     },
     // Auto restart settings
     watch: false,
