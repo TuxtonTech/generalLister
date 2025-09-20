@@ -13,11 +13,7 @@
 
 
   $: if ($isAuthenticated) {
-      if (browser && document.referrer && !document.referrer.includes('/login')) {
-          goto(document.referrer);
-      } else {
-          goto('/dashboard');
-      }
+    goto('/dashboard');
   }
 
   onMount(() => {
