@@ -41,7 +41,8 @@ class GrabcgcGrading:
             
             # Process the summary into the final structured format
             for item in summary:
-                for key, value in item:
+                # Correctly iterate over the dictionary's key-value pairs using .items()
+                for key, value in item.items():
                     parts = value.split('\n\n')
                     primary_value = parts[0].strip()
                     secondary_detail = parts[1].strip() if len(parts) > 1 else None
