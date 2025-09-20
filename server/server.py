@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from python.compareImages import ImageSimilarityComparer
 from python.backgroundRemover import BackgroundRemover  # Import the new class
+from python.cgc_identifier.cgc_controller import GrabcgcGrading
 import logging
 import base64
 
@@ -286,6 +287,15 @@ def get_image_info():
         logger.error(f"Server error in get_image_info: {e}")
         return jsonify({'error': 'Internal server error occurred'}), 500
 
+@app.route('/api/detect-grade', methods=["POST"])
+def detect_grade():
+    data = request.json
+    if not data or not data.get('image'):
+        return jsonify({'error': 'image is required'}), 400
+    image_bytes = process_image_data(data.get('image'))
+    grade_detector = GrabcgcGrading()
+    results = grade_detector.process_image(image_bytes)
+    return jsonify(results)
 
 @app.errorhandler(413)
 def too_large(e):

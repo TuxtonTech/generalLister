@@ -184,8 +184,30 @@ class ComicPricingDetails {
                 } catch (error) {
                     console.warn(`Failed to fetch issue sales for ${bestMatch.id}:`, error);
                 }
-                
+
+                const response = await fetch('http://localhost:300/api/detect-grade', {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image: Array.from(new Uint8Array(imageBuffer)),
+                    })
+                })
+                let cgcGrade = false;
+                try {
+                    const gradeBody: any = await response.json()
+                    if (gradeBody) cgcGrade = gradeBody['cgc_grade']
+
+                } catch (e) {
+
+                }
+
+
+
                 const result = { 
+                    grade: cgcGrade,
                     ...bestMatch, 
                     fmv: fmv,
                     similarityScore: bestResult.score,
@@ -203,6 +225,14 @@ class ComicPricingDetails {
             } catch (apiError) {
                 console.error('Error calling comparison API:', apiError);
                 throw apiError;
+            }
+
+
+            //Call Detect Grading
+            try {
+
+            } catch (apiError) {
+
             }
 
         } catch (error) {

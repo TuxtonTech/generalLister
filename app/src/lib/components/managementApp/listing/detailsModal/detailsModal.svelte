@@ -92,20 +92,25 @@ async function formatData(blobUrl: string, username: string, password: string) {
         if (data.title) autoDescription += `Series: ${data.title}\n`;
         if (data.variant_name) autoDescription += `Variant: ${data.variant_name}\n`;
         if (data.fmv) {
-    if (data.fmv.raw && Object.keys(data.fmv.raw).length > 0) {
-        const rawPrices = Object.entries(data.fmv.raw)
-            .map(([condition, price]) => `${condition}: ${price}`)
-            .join(', ');
-        autoDescription += `Raw FMV: ${rawPrices}\n`;
-    }
-    
-    if (data.fmv.graded && Object.keys(data.fmv.graded).length > 0) {
-        const gradedPrices = Object.entries(data.fmv.graded)
-            .map(([grade, price]) => `${grade}: ${price}`)
-            .join(', ');
-        autoDescription += `Graded FMV: ${gradedPrices}\n`;
-    }
-}
+            if(data.graded && data.fmv.graded && Object.keys(data.fmv.graded).length > 0) {
+                
+                const gradedPrices = Object.entries(data.fmv.graded)
+                const grading = data.graded
+                for(let [key, value] of gradedPrices) {
+                    if(key == grading) {
+                        price = parseFloat(value + "")
+                    }
+                }
+                const desc = gradedPrices.map(([grade, price]) => `${grade}: ${price}`)
+                .join(', ');
+                autoDescription += `Graded FMV: ${desc}\n`;
+            } else if (data.fmv.raw && Object.keys(data.fmv.raw).length > 0) {
+                const rawPrices = Object.entries(data.fmv.raw)
+                    .map(([condition, price]) => `${condition}: ${price}`)
+                    .join(', ');
+                autoDescription += `Raw FMV: ${rawPrices}\n`;
+            }
+        }
         if (data.similarityScore) {
             autoDescription += `Match Confidence: ${(data.similarityScore * 100).toFixed(1)}%\n`;
         }
