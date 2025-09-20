@@ -52,3 +52,14 @@ class GrabcgcGrading:
 
         return structured_info
 
+
+
+if __name__ == "__main__":
+    # Example usage
+    
+    # Load an example image file as binary data
+    with open('1.png', 'rb') as img_file:
+        image_bytes = img_file.read()
+    
+    results = GrabcgcGrading().process_image(image_bytes)
+    print(results)
