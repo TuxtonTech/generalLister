@@ -1,3 +1,4 @@
+# Add these imports at the top of your file
 import cv2
 import numpy as np
 import pytesseract
@@ -13,6 +14,7 @@ class ImageToText:
     def crop_objects(self, binaryImage: bytearray, detections: List[Dict]) -> List[Dict]:
         """
         Crops all detected objects from an image based on a list of bounding boxes.
+        (Your existing code for this method goes here...)
         """
         # 1. Decode the binary image data once
         numPyArray = np.frombuffer(binaryImage, np.uint8)
@@ -31,45 +33,47 @@ class ImageToText:
             x1, y1, x2, y2 = map(int, coords)
 
             # 4. Crop the image using the bounding box coordinates
-            cropped_img = original_image[y1:y2, x1:x2]
-            
-            # 5. Store the cropped image and its label in a new dictionary
-            if cropped_img.size > 0:
-                cropped_results.append({'label': label, 'image': cropped_img})
-        
-        return cropped_results
+            # The slicing order is [y_start:y_end, x_start:x_end]
+            cropped_image_data = original_image[y1:y2, x1:x2]
 
-    def summarize_text(self, image_objects: List[Dict]) -> List[Dict] | str:
+            # 5. Append the result in the desired format
+            cropped_results.append({
+                'label': label,
+                'image': cropped_image_data
+            })
+
+        return cropped_results
+        
+    def summarize_text(self, image_objects: List[Dict]) -> str:
         """
-        Extracts and summarizes text from a list of cropped image objects.
+        Performs OCR on a list of cropped image objects and returns a summarized string.
+
+        Args:
+            image_objects (List[Dict]): A list of dictionaries, where each contains
+                                        a 'label' and 'image' (NumPy array).
+
+        Returns:
+            str: A formatted string containing the label and extracted text for each object.
         """
         summary_list = []
+        # 1. Loop through each dictionary in the image_objects list
         for obj in image_objects:
             label = obj['label']
             image_data = obj['image']
             
-            # --- NEW: Image Pre-processing for better OCR ---
-            # 1. Convert the image to grayscale
-            gray_image = cv2.cvtColor(image_data, cv2.COLOR_BGR2GRAY)
-
-            # 2. Apply adaptive thresholding to create a clean black & white image
-            # This helps Tesseract distinguish text from the background
-            binary_image = cv2.adaptiveThreshold(
-                gray_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                cv2.THRESH_BINARY, 11, 2
-            )
+            # 2. Convert the OpenCV image (BGR) to a PIL Image (RGB)
+            # Pytesseract works best with PIL images.
+            rgb_image = cv2.cvtColor(image_data, cv2.COLOR_BGR2RGB)
+            pil_image = Image.fromarray(rgb_image)
             
-            pil_image = Image.fromarray(binary_image)
-            
+            # 3. Use Pytesseract to extract text from the image
             try:
-                # We will try a different Page Segmentation Mode (PSM)
-                # --psm 6 assumes a single uniform block of text.
-                custom_config = r'--psm 6'
-                extracted_text = pytesseract.image_to_string(pil_image, config=custom_config)
-                
+                extracted_text = pytesseract.image_to_string(pil_image)
+                # Clean up the text by removing extra whitespace
                 clean_text = extracted_text.strip()
                 
-                if clean_text:
+                # 4. Format the output and add it to our summary list
+                if clean_text: # Only add if OCR found some text
                     summary_list.append({label: clean_text})
 
             except pytesseract.TesseractNotFoundError:
@@ -77,4 +81,5 @@ class ImageToText:
             except Exception as e:
                 print(f"An error occurred during OCR for label '{label}': {e}")
         
+        # 5. Join all the individual summaries into a single string
         return summary_list
