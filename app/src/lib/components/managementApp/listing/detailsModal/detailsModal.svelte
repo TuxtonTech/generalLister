@@ -71,44 +71,44 @@ async function formatData(blobUrl: string, username: string, password: string) {
         if (data.title) autoTitle += data.title;
         if (data.variant_name) autoTitle += ` (${data.variant_name})`;
         title = autoTitle.trim();
-        
+        console.log()
         // Initialize price as undefined to ensure graded price logic works
         price = undefined;
-        
+
         // Fill price based on FMV data - prioritize graded prices if available
         if (data.grade && data.fmv?.graded && Object.keys(data.fmv.graded).length > 0) {
             // Handle graded pricing first (highest priority)
             let gradedPrices = Object.entries(data.fmv.graded);
             let lowerGrade = null, upperGrade = null;
             let lowerPrice = null, upperPrice = null;
-                        
+
             // Sort by grade in ascending order for easier processing
             gradedPrices = gradedPrices.sort((a, b) => +a[0] - +b[0]);
-                        
+
             for (let [key, value] of gradedPrices) {
                 const grade = +key;
                 const dataGrade = +data.grade; // Ensure numeric comparison
-                
+
                 // Check for exact match first
                 if (grade === dataGrade) {
                     price = parseFloat(value + "");
                     console.log(`Exact grade match found: ${grade} = $${price}`);
                     break;
                 }
-                
+
                 // Find the closest lower grade
                 if (grade < dataGrade) {
                     lowerGrade = grade;
                     lowerPrice = parseFloat(value + "");
                 }
-                
+
                 // Find the closest upper grade
                 if (grade > dataGrade && upperGrade === null) {
                     upperGrade = grade;
                     upperPrice = parseFloat(value + "");
                 }
             }
-            
+
             // If no exact match found, interpolate between closest grades
             if (price === undefined && lowerPrice !== null && upperPrice !== null) {
                 const averagePrice = (lowerPrice + upperPrice) / 2;
@@ -116,7 +116,7 @@ async function formatData(blobUrl: string, username: string, password: string) {
                 console.log(`Interpolating between grade ${lowerGrade} ($${lowerPrice}) and grade ${upperGrade} ($${upperPrice})`);
                 console.log(`Average price: $${averagePrice}, Final price: $${price}`);
             }
-            
+
             // If only one bound is available, use that price
             else if (price === undefined && (lowerPrice !== null || upperPrice !== null)) {
                 price = lowerPrice || upperPrice;
@@ -134,21 +134,21 @@ async function formatData(blobUrl: string, username: string, password: string) {
         else if (data.sold?.raw) {
             price = parseFloat(data.sold.raw);
         }
-    
+
         // Set default quantity
         if (!quantity) quantity = 1;
-    
+
         // Generate description from available data
         let autoDescription = '';
         if (data.publisher) autoDescription += `Publisher: ${data.publisher}\n`;
         if (data.title) autoDescription += `Series: ${data.title}\n`;
         if (data.variant_name) autoDescription += `Variant: ${data.variant_name}\n`;
-        
+
         if (data.fmv) {
             if(data.grade && data.fmv.graded && Object.keys(data.fmv.graded).length > 0) {
                 autoDescription += `Grade: ${data.grade} \n`
                 autoDescription += `Issue: ${data.comic_issue} \n`
-                
+
                 const gradedPrices = Object.entries(data.fmv.graded);
                 const desc = gradedPrices.map(([grade, price]) => `${grade}: ${price}`)
                     .join(', ');
@@ -160,7 +160,7 @@ async function formatData(blobUrl: string, username: string, password: string) {
                 autoDescription += `Raw FMV: ${rawPrices}\n`;
             }
         }
-        
+
         if (data.similarityScore) {
             autoDescription += `Match Confidence: ${(data.similarityScore * 100).toFixed(1)}%\n`;
         }
@@ -168,13 +168,13 @@ async function formatData(blobUrl: string, username: string, password: string) {
             autoDescription += `Recent Sales Available: ${data.fmv.length} sales found\n`;
         }
         description = autoDescription.trim();
-    
+
         // Auto-add relevant aspects/tags
         const autoAspects = [];
         if (data.publisher) autoAspects.push(data.publisher);
         if (data.variant_name) autoAspects.push(data.variant_name);
         if (data.sold?.graded && parseFloat(data.sold.graded) > 0) autoAspects.push('Graded');
-        
+
         // Add aspects that aren't already in the list
         autoAspects.forEach(aspect => {
             if (!listingAspects.includes(aspect)) {
