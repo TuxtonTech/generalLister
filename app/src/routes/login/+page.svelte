@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import { authStore, isLoading, authError, isAuthenticated } from '$lib/store/auth';
+  import { browser } from '$app/environment';
 
   let mode: 'signin' | 'signup' | 'reset' = 'signin';
   let email = '';
@@ -10,8 +11,13 @@
   let displayName = '';
   let successMessage = '';
 
+
   $: if ($isAuthenticated) {
-    goto('/app');
+      if (browser && document.referrer && !document.referrer.includes('/login')) {
+          goto(document.referrer);
+      } else {
+          goto('/app');
+      }
   }
 
   onMount(() => {
