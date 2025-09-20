@@ -1,4 +1,5 @@
 from .cgcBoxIdentifier import CGCIdentifier
+from .image_to_text import ImageToText
 import cv2
 import io
 
@@ -22,7 +23,6 @@ class GrabcgcGrading:
 
         structured_info = {}
         if graded: 
-            from image_to_text import ImageToText
             image_to_text = ImageToText()
             items_to_process = [detection for detection in results if detection['label'] in ['cgc_grade', 'comic_issue']]
 
