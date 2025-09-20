@@ -1,5 +1,5 @@
-from .cgcBoxIdentifier import CGCIdentifier
-from .image_to_text import ImageToText
+from cgcBoxIdentifier import CGCIdentifier
+from image_to_text import ImageToText
 import cv2
 import io
 
@@ -11,7 +11,8 @@ class GrabcgcGrading:
         pass
 
     def process_image(self, image_bytes):
-        identifier = CGCIdentifier(model_path='/root/generalLister/server/python/cgc_identifier/cgc_identifier_model2/weights/best.pt')
+        identifier = CGCIdentifier(model_path=''
+        './cgc_identifier_model2/weights/best.pt')
         graded=False
         confidence_threshold = 0.6
 
@@ -29,6 +30,7 @@ class GrabcgcGrading:
             cropped_objects = image_to_text.crop_objects(image_bytes, items_to_process)
             summary = image_to_text.summarize_text(cropped_objects)
             structured_info = {}
+            print(summary)
             for item in summary:
                 # Get the key (e.g., 'cgc_grade') and the full string value
                 for key, value in item.items():
