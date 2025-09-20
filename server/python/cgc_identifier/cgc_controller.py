@@ -1,4 +1,4 @@
-from cgcBoxIdentifier import CGCIdentifier
+from .cgcBoxIdentifier import CGCIdentifier
 import cv2
 import io
 
