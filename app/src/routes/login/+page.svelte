@@ -16,7 +16,7 @@
       if (browser && document.referrer && !document.referrer.includes('/login')) {
           goto(document.referrer);
       } else {
-          goto('/app');
+          goto('/dashboard');
       }
   }
 
