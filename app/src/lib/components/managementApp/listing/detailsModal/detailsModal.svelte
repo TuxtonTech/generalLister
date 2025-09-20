@@ -92,12 +92,12 @@ async function formatData(blobUrl: string, username: string, password: string) {
         if (data.title) autoDescription += `Series: ${data.title}\n`;
         if (data.variant_name) autoDescription += `Variant: ${data.variant_name}\n`;
         if (data.fmv) {
-            if(data.graded && data.fmv.graded && Object.keys(data.fmv.graded).length > 0) {
-                
+            if(data.grade && data.fmv.graded && Object.keys(data.fmv.graded).length > 0) {
+                autoDescription += `Grade: ${data.grade}`
+                autoDescription += `Issue: ${data.comic_issue}`
                 const gradedPrices = Object.entries(data.fmv.graded)
-                const grading = data.graded
                 for(let [key, value] of gradedPrices) {
-                    if(key == grading) {
+                    if(key == data.grade) {
                         price = parseFloat(value + "")
                     }
                 }
