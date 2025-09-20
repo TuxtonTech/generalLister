@@ -48,17 +48,24 @@ class ImageToText:
             label = obj['label']
             image_data = obj['image']
             
-            rgb_image = cv2.cvtColor(image_data, cv2.COLOR_BGR2RGB)
-            pil_image = Image.fromarray(rgb_image)
+            # --- NEW: Image Pre-processing for better OCR ---
+            # 1. Convert the image to grayscale
+            gray_image = cv2.cvtColor(image_data, cv2.COLOR_BGR2GRAY)
+
+            # 2. Apply adaptive thresholding to create a clean black & white image
+            # This helps Tesseract distinguish text from the background
+            binary_image = cv2.adaptiveThreshold(
+                gray_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv2.THRESH_BINARY, 11, 2
+            )
+            
+            pil_image = Image.fromarray(binary_image)
             
             try:
-                # --- THE FIX ---
-                # We add a custom configuration to tell Tesseract to treat the image
-                # as a single line of text (--psm 7). This dramatically improves
-                # its ability to recognize large, isolated numbers.
-                custom_config = r'--psm 7'
+                # We will try a different Page Segmentation Mode (PSM)
+                # --psm 6 assumes a single uniform block of text.
+                custom_config = r'--psm 6'
                 extracted_text = pytesseract.image_to_string(pil_image, config=custom_config)
-                # --- END FIX ---
                 
                 clean_text = extracted_text.strip()
                 
