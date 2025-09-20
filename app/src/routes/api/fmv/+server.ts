@@ -185,7 +185,7 @@ class ComicPricingDetails {
                     console.warn(`Failed to fetch issue sales for ${bestMatch.id}:`, error);
                 }
 
-                const response = await fetch('http://localhost:300/api/detect-grade', {
+                const response = await fetch('http://localhost:5000/api/detect-grade', {
                     method: "POST",
                     headers: {
                         'Content-Type': 'application/json',
