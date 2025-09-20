@@ -1,5 +1,5 @@
-from cgcBoxIdentifier import CGCIdentifier
-from image_to_text import ImageToText
+from .cgcBoxIdentifier import CGCIdentifier
+from .image_to_text import ImageToText
 import cv2
 import io
 
