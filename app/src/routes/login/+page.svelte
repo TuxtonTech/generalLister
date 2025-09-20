@@ -11,7 +11,7 @@
   let successMessage = '';
 
   $: if ($isAuthenticated) {
-    goto('/dashboard');
+    goto('/app');
   }
 
   onMount(() => {

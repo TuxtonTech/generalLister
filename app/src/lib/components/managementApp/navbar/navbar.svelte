@@ -23,6 +23,7 @@
         <button on:click={() => navigateAndClose('accounts')}>Accounts</button>
     </div>
     <div>
+        <button on:click={() => window.location.href = '/dashboard'}>Dashboard</button>
         <button on:click={() => navigateAndClose('settings')}>Settings</button>
     </div>
 </div>
