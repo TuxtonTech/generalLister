@@ -45,7 +45,7 @@ class GrabcgcGrading:
                     if key == 'cgc_grade':
                         structured_info[key] = parts[0].strip()
                     else: 
-                        structured_info[key] = primary_value + "|" + secondary_detail  # Just the grade value
+                        structured_info[key] = primary_value + " | " + secondary_detail  # Just the grade value
             print(structured_info)
         else:
             print("No grading detected, skipping.")
