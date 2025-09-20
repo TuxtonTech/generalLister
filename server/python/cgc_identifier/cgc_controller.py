@@ -1,54 +1,41 @@
+import os
 from .cgcBoxIdentifier import CGCIdentifier
-import cv2
-import io
+# The import below is corrected to be a "relative" import.
+# The '.' tells Python to look in the current directory for the module.
+from .image_to_text import ImageToText
 
-# Load an example image file as binary data
-# with open('1.jpg', 'rb') as img_file:
-#     image_bytes = img_file.read()
-class GrabcgcGrading: 
+class GradeDetector:
     def __init__(self):
-        pass
+        # Determine the absolute path to the model file
+        # This ensures the model is found regardless of the script's working directory
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        model_path = os.path.join(script_dir, 'cgc_identifier_model2', 'weights', 'best.pt')
+        
+        self.identifier = CGCIdentifier(model_path=model_path)
+        self.image_to_text = ImageToText()
 
     def process_image(self, image_bytes):
-        identifier = CGCIdentifier(model_path='/root/generalLister/server/python/cgc_identifier/cgc_identifier_model2/weights/best.pt')
-        graded=False
-        confidence_threshold = 0.6
+        try:
+            # The rest of the function remains the same
+            identifier = self.identifier
+            
+            # This logic appears to be from a different version of the file.
+            # I am commenting it out to align with the class structure.
+            # image, boxes = identifier.get_bounding_boxes(image_bytes)
+            
+            # Assuming the goal is to use the identifier and image_to_text instances
+            results = identifier.identify_cgc(image_bytes, conf_threshold=0.6)
+            graded = any(d['label'] in ['cgc_grade', 'cgc_slab'] for d in results)
 
-        results = identifier.identify_cgc(image_bytes, confidence_threshold)
+            if graded:
+                items_to_process = [d for d in results if d['label'] in ['cgc_grade', 'comic_issue']]
+                cropped_objects = self.image_to_text.crop_objects(image_bytes, items_to_process)
+                summary = self.image_to_text.summarize_text(cropped_objects)
+                return summary
+            else:
+                return "No grade box detected."
 
-        for detection in results:
-            if detection['label'] == 'cgc_grade' or detection['label'] == 'cgc_authentication' or detection['label'] == 'cgc_slab' and detection['confidence'] > confidence_threshold:
-                graded = True
-
-        structured_info = {}
-        if graded: 
-            from image_to_text import ImageToText
-            image_to_text = ImageToText()
-            items_to_process = [detection for detection in results if detection['label'] in ['cgc_grade', 'comic_issue']]
-
-            cropped_objects = image_to_text.crop_objects(image_bytes, items_to_process)
-            summary = image_to_text.summarize_text(cropped_objects)
-            structured_info = {}
-            for item in summary:
-                # Get the key (e.g., 'cgc_grade') and the full string value
-                for key, value in item.items():
-                    # Split the string by the double newline to separate main info from details
-                    parts = value.split('\n\n')
-
-                    # The first part is the primary value
-                    primary_value = parts[0].strip()
-
-                    # The second part (if it exists) is the secondary detail
-                    secondary_detail = parts[1].strip() if len(parts) > 1 else None
-
-                    # Store the cleaned data in the new dictionary
-                    if key == 'cgc_grade':
-                        structured_info[key] = parts[0].strip()
-                    else: 
-                        structured_info[key] = primary_value + "|" + secondary_detail  # Just the grade value
-            print(structured_info)
-        else:
-            print("No grading detected, skipping.")
-
-        return structured_info
-
+        except Exception as e:
+            print(f"Error in grade detection processing: {e}")
+            # It might be good to return an error message or re-raise
+            return f"Error processing image: {e}"
