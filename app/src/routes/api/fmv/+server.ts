@@ -196,17 +196,23 @@ class ComicPricingDetails {
                     })
                 })
                 let cgcGrade = false;
+                let cgcIssue = false
                 try {
                     const gradeBody: any = await response.json()
-                    if (gradeBody) cgcGrade = gradeBody['cgc_grade']
+                    if (gradeBody) {
+                        cgcIssue = gradeBody['comic_issue']
+                        cgcGrade = gradeBody['cgc_grade']
+                }
+                    console.log(cgcGrade)
 
                 } catch (e) {
-
+                    console.log(e)
                 }
 
 
 
                 const result = { 
+                    comic_issue: cgcIssue,
                     grade: cgcGrade,
                     ...bestMatch, 
                     fmv: fmv,
